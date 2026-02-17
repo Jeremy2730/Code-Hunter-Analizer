@@ -1,0 +1,44 @@
+├── CodeHunter/
+│   ├── __init__.py
+│   ├── __main__.py
+│   ├── analyzers/
+│   │   ├── __init__.py
+│   │   ├── circular_imports.py   
+│   │   ├── file_analyzer.py      
+│   │   ├── full_report.py        
+│   │   ├── function_analyzer.py  
+│   │   ├── health_calculator.py  
+│   │   ├── import_analyzer.py    
+│   │   ├── project_profiler.py   
+│   │   ├── project_scanner.py    
+│   │   ├── smart_code_searcher.py
+│   │   └── system_doctor.py      
+│   ├── code_searcher.py
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── constants.py
+│   │   ├── diagnosis_engine.py
+│   │   └── models.py
+│   ├── estructura.txt
+│   ├── file_scanner.py
+│   ├── function_parser.py
+│   ├── index_builder.py
+│   ├── infrastructure/
+│   │   ├── __init__.py
+│   │   └── pdf_exporter.py
+│   ├── main.py
+│   ├── notas, detector de funciones.txt
+│   ├── ui/
+│   │   ├── __init__.py
+│   │   ├── cli_controller.py
+│   │   ├── diagnosis_presenter.py
+│   │   ├── full_report_presenter.py
+│   │   ├── function_report_presenter.py
+│   │   ├── menu_controller.py
+│   │   ├── project_presenter.py
+│   │   └── search_presenter.py
+│   └── utils/
+│       ├── __init__.py
+│       └── project_walker.py
+├── __init__.py
+└── requirements.txt

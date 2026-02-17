@@ -1,0 +1,43 @@
+
+herramienta detector de funciones
+
+
+para empezar hay que buscar en power shell o cmd
+la direccion de las carpetas, en mi caso:
+
+borrar venv
+
+rmdir .venv -Recurse -Force
+python -m venv .venv
+
+python -m pip install --upgrade pip     --Actualizar pip
+pip install rich click pylint           --Instalar dependencias del proyecto
+pip freeze > requirements.txt           --crear requirements.txt
+pip install -r requirements.txt         --Guardar dependencias
+
+.\.venv\Scripts\Activate.ps1            --Activar el venv
+
+ls .venv                                --Verifica la estructura
+ls .venv\Scripts
+
+python -m venv .venv                    --crea el entorno
+
+.venv\Scripts\Activate.ps1              -- activar el venv
+
+pip install -r requirements.txt        -- para instalar en otro pc
+
+
+librerias:
+
+pip install pandas
+
+python -m CodeHunter             /para ejecutar CodeHunter
+
+python -m CodeHunter.main
+
+
+
+C:\Users\ADMIN\Desktop\CodeHunter_Analizer
+C:\Users\ADMIN\Downloads\CodeHunter_Analizer
+
+C:\Users\ADMIN\Desktop\CodeHunter_Analizer -0.2
