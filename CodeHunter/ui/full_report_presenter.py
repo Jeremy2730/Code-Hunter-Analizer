@@ -22,6 +22,16 @@ def print_full_diagnosis_report(report: Dict[str, Any]) -> None:
     print(f"📁 Proyecto  : {profile.get('name', 'N/A')}")
     print(f"🧠 Tipo      : {profile.get('type', 'No detectado')}")
     print()
+    
+    # ── Descripción narrativa (MOVIDA AQUÍ) ──
+    description = profile.get("description", "")
+    if description:
+        print("📝 Descripción:")
+        for line in description.split(". "):
+            if line.strip():
+                print(f"   {line.strip()}.")
+        print()
+
     print(f"📊 Estructura:")
     print(f"   • Archivos Python : {structure.get('python_files', 0)}")
     print(f"   • Funciones       : {structure.get('functions', 0)}")
@@ -65,17 +75,6 @@ def print_full_diagnosis_report(report: Dict[str, Any]) -> None:
             print(f"        📄 {f.file}  (línea {f.line})")
             print(f"        💡 {f.suggestion}")
             print()
-
-    # ── Descripción narrativa ──
-    description = profile.get("description", "")
-    if description:
-        print("-" * 70)
-        print("📝 Descripción del sistema analizado:")
-        print()
-        for line in description.split(". "):
-            if line.strip():
-                print(f"   {line.strip()}.")
-        print()
 
     print("=" * 70)
     print("✔ Diagnóstico completado.")

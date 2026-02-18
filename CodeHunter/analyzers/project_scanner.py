@@ -1,6 +1,6 @@
 import os
 import ast
-
+from ..file_scanner import build_project_tree  # ← AGREGAR AQUÍ
 from ..core.models import Finding
 from ..utils.project_walker import walk_project
 
@@ -28,7 +28,6 @@ def scan_project(project_path):
 
 def scan_project_structure(project_path):
     """Genera el árbol de estructura del proyecto (para opción 1)"""
-    from ..file_scanner import build_project_tree
     return build_project_tree(project_path)
 
 
