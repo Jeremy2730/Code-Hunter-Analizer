@@ -41,9 +41,9 @@ C:\Users\ADMIN\Desktop\CodeHunter_Analizer -0.2
 
 git status      si se modifica algo
 
-                "Agregué nueva función de análisis"
+
 git add .
-git commit -m    
+git commit -m     "Agregué nueva función de análisis"
 git push
 
 git diff    ver que cambio
@@ -56,5 +56,7 @@ git grep "nombre_de_funcion"    buscar palabra en proyecto
 git restore nombre_archivo.py        atras  si algo sale mal
 git checkout ID_DEL_COMMIT            volver a un commit
 
+git diff       comparar cambion entre commit
 
+git show d33cb5b         ver que cambio en un commit
      
