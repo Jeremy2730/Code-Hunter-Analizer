@@ -37,7 +37,24 @@ python -m CodeHunter.main
 
 
 
-C:\Users\ADMIN\Desktop\CodeHunter_Analizer
-C:\Users\ADMIN\Downloads\CodeHunter_Analizer
-
 C:\Users\ADMIN\Desktop\CodeHunter_Analizer -0.2
+
+git status      si se modifica algo
+
+                "Agregué nueva función de análisis"
+git add .
+git commit -m    
+git push
+
+git diff    ver que cambio
+ 
+git log               ver historial
+git log --oneline    veer historial resumida
+
+git grep "nombre_de_funcion"    buscar palabra en proyecto
+
+git restore nombre_archivo.py        atras  si algo sale mal
+git checkout ID_DEL_COMMIT            volver a un commit
+
+
+     
