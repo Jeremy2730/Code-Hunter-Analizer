@@ -59,4 +59,11 @@ git checkout ID_DEL_COMMIT            volver a un commit
 git diff       comparar cambion entre commit
 
 git show d33cb5b         ver que cambio en un commit
-     
+
+ git pull     (para traer lo último)    
+
+git clone https://github.com/Jeremy2730/Code-Hunter-Analizer.git   clonarlo en otra pc
+
+Code-Hunter-Analizer        sale esta carpeta
+
+cd Code-Hunter-Analizer    luego se entra aqui
