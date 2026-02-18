@@ -36,8 +36,8 @@ python -m CodeHunter             /para ejecutar CodeHunter
 python -m CodeHunter.main
 
 
+C:\Users\ADMIN\Downloads\CodeHunter_Analizer -0.2
 
-C:\Users\ADMIN\Desktop\CodeHunter_Analizer -0.2
 
 git status      si se modifica algo
 
