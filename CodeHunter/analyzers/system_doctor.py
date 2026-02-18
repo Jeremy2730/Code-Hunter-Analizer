@@ -1,11 +1,12 @@
-from .project_scanner import scan_project
+from .project_scanner import scan_project  # ← Mantener este nombre
 from .file_analyzer import detect_empty_python_files, detect_empty_folders
 from .circular_imports import detect_circular_imports
 from .health_calculator import calculate_health
 from ..core.models import Finding
 
 
-def run_system_diagnosis(project_path):
+def run_code_doctor(project_path):  # ← CAMBIAR NOMBRE A run_code_doctor
+    """Ejecuta diagnóstico completo del sistema"""
 
     findings = scan_project(project_path)
     findings.extend(detect_empty_python_files(project_path))
@@ -22,7 +23,6 @@ def run_system_diagnosis(project_path):
                 suggestion="Reorganizar imports para eliminar la dependencia circular."
             )
         )
-
 
     health = calculate_health(findings)
 

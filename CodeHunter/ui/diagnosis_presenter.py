@@ -1,29 +1,27 @@
 def print_diagnosis_report(data):
-    profile = data.get("profile", {})
-
-    print("\n" + "="*60)
-    print(f"📁 Proyecto: {profile.get('name', 'N/A')}")
+    """Diagnóstico rápido - Solo muestra si hay problemas"""
+    
+    print("\n" + "🩺 Ejecutando Code Doctor...")
     print("="*60)
-
-    print("\n🧠 Tipo de sistema:")
-    print(profile.get("type", "No detectado"))
-
-    print("\n📝 Descripción:")
-    print(profile.get("description", "Sin descripción"))
-
-    print("\n📊 Estructura:")
-    structure = profile.get("structure", {})
-    print(f"  • Archivos Python: {structure.get('python_files', 0)}")
-    print(f"  • Funciones: {structure.get('functions', 0)}")
-    print(f"  • Clases: {structure.get('classes', 0)}")
-
-    print("\n🚨 Diagnóstico:")
-    print(f"  • Críticos: {data.get('critical', 0)}")
-    print(f"  • Advertencias: {data.get('warnings', 0)}")
-    print(f"  • Estado: {data.get('status', 'N/A')}")
-
-    print("\n🔍 Hallazgos:")
-    for finding in data.get("findings", []):
-        print(f"  - {finding}")
-
-    print("="*60 + "\n")
+    
+    critical = data.get('critical', 0)
+    warnings = data.get('warnings', 0)
+    status = data.get('status', 'HEALTHY')
+    
+    # Solo mostrar si hay problemas
+    if critical == 0 and warnings == 0:
+        print("✅ Sistema saludable - No se detectaron problemas")
+    else:
+        print(f"🚨 Críticos: {critical}")
+        print(f"⚠️  Advertencias: {warnings}")
+        print(f"📊 Estado: {status}")
+        print("\n🔍 Hallazgos:")
+        
+        for finding in data.get("findings", []):
+            level = finding.level.value if hasattr(finding.level, "value") else finding.level
+            icon = {"CRITICAL": "❌", "WARNING": "⚠️", "INFO": "ℹ️"}.get(level, "•")
+            print(f"  {icon} [{level}] {finding.message}")
+            print(f"     📄 {finding.file} (línea {finding.line})")
+            print(f"     💡 {finding.suggestion}\n")
+    
+    print("="*60)

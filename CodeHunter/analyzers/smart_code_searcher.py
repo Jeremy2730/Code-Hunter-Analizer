@@ -3,7 +3,6 @@ import ast
 from ..utils.project_walker import walk_project
 
 
-
 STRUCTURE_KEYWORDS = {
     "def": ast.FunctionDef,
     "class": ast.ClassDef,
@@ -13,7 +12,9 @@ STRUCTURE_KEYWORDS = {
     "import": (ast.Import, ast.ImportFrom),
 }
 
-def smart_search(project_path, query):
+
+def search_code(project_path, query):  # ← CAMBIAR NOMBRE A search_code
+    """Búsqueda inteligente de código"""
     query = query.strip()
     results = []
 
@@ -37,8 +38,9 @@ def smart_search(project_path, query):
 
     return results
 
-# buscar dentro de carpeta
+
 def search_in_folder(folder_path, query=None):
+    """Buscar dentro de carpeta"""
     results = []
 
     for root, files in walk_project(folder_path):
@@ -54,8 +56,8 @@ def search_in_folder(folder_path, query=None):
     return results
 
 
-#buscar estructuras
 def search_structure(project_path, node_types, label):
+    """Buscar estructuras"""
     results = []
 
     for root, files in walk_project(project_path):
@@ -83,9 +85,8 @@ def search_structure(project_path, node_types, label):
     return results
 
 
-
-#buscar clase o nombre
 def search_function_or_class(project_path, name):
+    """Buscar clase o nombre"""
     results = []
 
     for root, files in walk_project(project_path):
@@ -121,9 +122,8 @@ def search_function_or_class(project_path, name):
     return results
 
 
-
-# falback texto plano
 def search_text(project_path, text):
+    """Fallback texto plano"""
     results = []
 
     for root, files in walk_project(project_path):
@@ -149,7 +149,6 @@ def search_text(project_path, text):
     return results
 
 
-
-# identificador valido
 def is_valid_identifier(text):
+    """Identificador válido"""
     return text.isidentifier()
