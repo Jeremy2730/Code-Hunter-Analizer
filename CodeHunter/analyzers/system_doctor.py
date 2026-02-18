@@ -1,11 +1,11 @@
-from .project_scanner import scan_project  # ← Mantener este nombre
+from .project_scanner import scan_project
 from .file_analyzer import detect_empty_python_files, detect_empty_folders
 from .circular_imports import detect_circular_imports
 from .health_calculator import calculate_health
 from ..core.models import Finding
 
 
-def run_code_doctor(project_path):  # ← CAMBIAR NOMBRE A run_code_doctor
+def run_code_doctor(project_path):
     """Ejecuta diagnóstico completo del sistema"""
 
     findings = scan_project(project_path)

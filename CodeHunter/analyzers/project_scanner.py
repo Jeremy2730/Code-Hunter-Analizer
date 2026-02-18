@@ -9,6 +9,7 @@ from .function_analyzer import analyze_function, detect_duplicate_functions
 
 
 def scan_project(project_path):
+    """Escanea el proyecto buscando problemas de código"""
     findings = []
     function_index = {}
 
@@ -25,8 +26,14 @@ def scan_project(project_path):
     return findings
 
 
+def scan_project_structure(project_path):
+    """Genera el árbol de estructura del proyecto (para opción 1)"""
+    from ..file_scanner import build_project_tree
+    return build_project_tree(project_path)
+
 
 def analyze_file(file_path, findings, function_index, project_path):
+    """Analiza un archivo individual"""
 
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -34,11 +41,8 @@ def analyze_file(file_path, findings, function_index, project_path):
 
         tree = ast.parse(source)
 
-
         # 🔍 1️⃣ Detectar imports no usados
         unused_imports, duplicate_imports, imports_inside_functions, type_hint_only, wildcard_imports = detect_unused_imports(tree)
-
-        
 
         for imp, line in unused_imports:
             level = classify_import(imp, project_path)
@@ -51,7 +55,6 @@ def analyze_file(file_path, findings, function_index, project_path):
                 "Eliminar import si no es necesario."
             ))
 
-
         for imp, line in duplicate_imports:
             findings.append(Finding(
                 "WARNING",
@@ -60,8 +63,6 @@ def analyze_file(file_path, findings, function_index, project_path):
                 line,
                 "Eliminar una de las declaraciones repetidas."
             ))
-
-
 
         for imp, line in imports_inside_functions:
             findings.append(Finding(
@@ -81,7 +82,6 @@ def analyze_file(file_path, findings, function_index, project_path):
                 "Considerar usar 'from __future__ import annotations' o TYPE_CHECKING."
             ))
 
-
         for module, line in wildcard_imports:
             findings.append(Finding(
                 "WARNING",
@@ -90,8 +90,6 @@ def analyze_file(file_path, findings, function_index, project_path):
                 line,
                 "Evitar wildcard imports para mantener claridad y evitar conflictos."
             ))
-
-
 
         # 🔍 2️⃣ Analizar funciones
         for node in ast.walk(tree):
