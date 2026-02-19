@@ -18,7 +18,7 @@ class DashboardView(ctk.CTkFrame):
         self._build()
         self.state.subscribe(self._on_state_change)
 
-    def _build(self):
+    def _build_dashboard(self):
         C = self.colors
 
         header = ctk.CTkFrame(self, fg_color="transparent")
@@ -117,7 +117,7 @@ class DashboardView(ctk.CTkFrame):
         elif event == "analysis_done":  self.after(0, self._refresh)
         elif event == "reset":          self.after(0, self._clear)
 
-    def _show_loading(self):
+    def _on_analysis_update(self):
         self.status_badge.configure(text="  ANALIZANDO...  ",
             fg_color=self.colors["accent"], text_color="#FFFFFF")
 

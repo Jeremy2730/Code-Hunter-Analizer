@@ -19,7 +19,7 @@ class TreeView(ctk.CTkFrame):
         self._build()
         self.state.subscribe(self._on_state_change)
 
-    def _build(self):
+    def _build_tree(self):
         C = self.colors
 
         ctk.CTkLabel(
@@ -101,6 +101,6 @@ class TreeView(ctk.CTkFrame):
             "pdf": "📕", "png": "🖼", "jpg": "🖼",
         }.get(ext, "📄")
 
-    def _on_state_change(self, event, data):
+    def _on_tree_update(self, event, data):
         if event in ("folder_selected", "analysis_done", "reset"):
             self.after(0, self._render_tree)

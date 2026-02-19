@@ -26,10 +26,10 @@ class Sidebar(ctk.CTkFrame):
         self.colors     = colors
         self._nav_btns  = {}
 
-        self._build()
+        self._build_sidebar()
 
     # ──────────────────────────────────────────────────────────────────────────
-    def _build(self):
+    def _build_sidebar(self):
         C = self.colors
 
         # ── Logo ──────────────────────────────────────────────────────────────

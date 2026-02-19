@@ -19,7 +19,7 @@ class FindingsView(ctk.CTkFrame):
         self._build()
         self.state.subscribe(self._on_state_change)
 
-    def _build(self):
+    def _build_findings(self):
         C = self.colors
 
         header = ctk.CTkFrame(self, fg_color="transparent")
@@ -168,6 +168,6 @@ class FindingsView(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo exportar:\n{e}")
 
-    def _on_state_change(self, event, data):
-            if event in ("analysis_done", "reset"):
-                self.after(0, self._render_findings)
+    def _on_findings_update(self, event, data):
+        if event in ("analysis_done", "reset"):
+            self.after(0, self._render_findings)

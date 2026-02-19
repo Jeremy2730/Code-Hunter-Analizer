@@ -19,7 +19,8 @@ class SearchView(ctk.CTkFrame):
 
         self._build()
 
-    def _build(self):
+    def _build_search(self):
+
         C = self.colors
 
         ctk.CTkLabel(
