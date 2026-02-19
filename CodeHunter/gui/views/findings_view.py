@@ -8,18 +8,6 @@ from tkinter import filedialog, messagebox
 from gui.utils import level as _level, attr as _attr
 
 
-def _level(f) -> str:
-    if hasattr(f, "level"):
-        v = f.level
-        return (v.value if hasattr(v, "value") else str(v)).lower()
-    return str(f.get("level", "info")).lower()
-
-def _attr(f, key, default=""):
-    if hasattr(f, key):
-        return getattr(f, key) or default
-    return f.get(key, default)
-
-
 class FindingsView(ctk.CTkFrame):
     def __init__(self, parent, state, colors):
         super().__init__(parent, fg_color=colors["bg_dark"], corner_radius=0)

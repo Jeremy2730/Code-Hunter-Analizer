@@ -7,6 +7,7 @@ import os
 import threading
 import customtkinter as ctk
 from tkinter import filedialog
+from CodeHunter.analyzers.system_doctor import run_code_doctor
 
 
 class Sidebar(ctk.CTkFrame):
@@ -192,7 +193,6 @@ class Sidebar(ctk.CTkFrame):
         """Corre en hilo secundario para no bloquear la UI."""
         try:
             # ── Integración con tu backend ────────────────────────────────────
-            from CodeHunter.analyzers.system_doctor import run_code_doctor
 
             result = run_code_doctor(self.state.project_path)
 
