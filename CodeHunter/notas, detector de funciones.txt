@@ -35,6 +35,8 @@ python -m CodeHunter             /para ejecutar CodeHunter
 
 python -m CodeHunter.main
 
+python main_gui.py             ejecutar la gui
+
 
 C:\Users\ADMIN\Downloads\CodeHunter_Analizer -0.2
 
