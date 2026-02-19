@@ -17,7 +17,7 @@ class SearchView(ctk.CTkFrame):
         self.state  = state
         self.colors = colors
 
-        self._build()
+        self._build_search()
 
     def _build_search(self):
 

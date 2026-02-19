@@ -15,8 +15,8 @@ class DashboardView(ctk.CTkFrame):
         self.grid_rowconfigure(2, weight=1)
         self.state  = state
         self.colors = colors
-        self._build()
-        self.state.subscribe(self._on_state_change)
+        self._build_dashboard()
+        self.state.subscribe(self._on_analysis_update)
 
     def _build_dashboard(self):
         C = self.colors

@@ -16,7 +16,7 @@ class FindingsView(ctk.CTkFrame):
         self.state   = state
         self.colors  = colors
         self._filter = "all"
-        self._build()
+        self._build_findings()
         self.state.subscribe(self._on_state_change)
 
     def _build_findings(self):
