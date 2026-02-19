@@ -149,23 +149,32 @@ class FindingsView(ctk.CTkFrame):
         if not self.state.findings:
             messagebox.showwarning("Sin datos", "Ejecuta un análisis antes de exportar.")
             return
-        save_path = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf")],
-            initialfile="codehunter_report.pdf",
-            title="Guardar reporte PDF",
-        )
-        if not save_path:
-            return
         try:
             from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
-            export_report_to_pdf(self.state.diagnosis_data, save_path)
-            messagebox.showinfo("Exportado", f"Reporte guardado en:\n{save_path}")
-        except ImportError:
-            messagebox.showinfo("Demo", f"Backend no disponible.\nPDF se guardaría en:\n{save_path}")
+
+            finds  = self.state.findings
+            score  = self.state.health_score
+            críticos = sum(1 for f in finds if _level(f) == "critical")
+            warnings = sum(1 for f in finds if _level(f) == "warning")
+
+            profile_description = (
+                f"Proyecto: {self.state.project_path}\n"
+                f"Archivos analizados: {self.state.diagnosis_data.get('files_analyzed', 'N/A')}"
+            )
+
+            analysis_data = {
+                "score":    score,
+                "critical": críticos,
+                "warnings": warnings,
+                "findings": finds,
+            }
+
+            output_path = export_report_to_pdf(
+                self.state.project_path,
+                profile_description,
+                analysis_data,
+            )
+            messagebox.showinfo("✅ Exportado", f"PDF guardado en:\n{output_path}")
+
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo exportar:\n{e}")
-
-    def _on_state_change(self, event, data):
-        if event in ("analysis_done", "reset"):
-            self.after(0, self._render_findings)

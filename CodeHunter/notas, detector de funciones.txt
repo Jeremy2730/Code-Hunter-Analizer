@@ -72,3 +72,5 @@ Code-Hunter-Analizer        sale esta carpeta
 cd Code-Hunter-Analizer    luego se entra aqui
 
 Get-ChildItem -Recurse -Filter ""       buscar ubicacion de un archivo
+
+Get-Content ""
