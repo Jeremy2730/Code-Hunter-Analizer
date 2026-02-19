@@ -17,7 +17,7 @@ class TreeView(ctk.CTkFrame):
         self.colors = colors
 
         self._build_tree()
-        self.state.subscribe(self._on_state_change)
+        self.state.subscribe(self._on_tree_update)
 
     def _build_tree(self):
         C = self.colors
