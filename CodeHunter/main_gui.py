@@ -1,13 +1,16 @@
 """
 CodeHunter GUI - Entry Point
-Ejecutar desde la raíz del proyecto: python main_gui.py
 """
 
 import sys
 import os
 
-# Asegura que el proyecto raíz esté en el path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Apunta al directorio que CONTIENE la carpeta CodeHunter
+ROOT = os.path.dirname(os.path.abspath(__file__))
+PARENT = os.path.dirname(ROOT)
+
+sys.path.insert(0, ROOT)    # Para importar gui/
+sys.path.insert(0, PARENT)  # Para importar CodeHunter.infrastructure...
 
 from gui.app import CodeHunterApp
 

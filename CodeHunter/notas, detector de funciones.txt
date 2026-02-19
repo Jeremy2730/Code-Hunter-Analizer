@@ -48,6 +48,7 @@ git add .
 git commit -m     "Agregué nueva función de análisis"
 git push
 
+
 git diff    ver que cambio
  
 git log               ver historial
