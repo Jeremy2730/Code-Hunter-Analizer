@@ -178,3 +178,7 @@ class FindingsView(ctk.CTkFrame):
 
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo exportar:\n{e}")
+
+    def _on_state_change(self, event, data):
+            if event in ("analysis_done", "reset"):
+                self.after(0, self._render_findings)
