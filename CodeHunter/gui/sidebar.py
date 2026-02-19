@@ -2,7 +2,6 @@
 CodeHunter GUI - Sidebar
 Panel lateral con: logo, selector de carpeta, navegación, botón de análisis.
 """
-
 import os
 import threading
 import customtkinter as ctk
@@ -216,7 +215,7 @@ class Sidebar(ctk.CTkFrame):
 
     def _load_demo_data(self):
         """Datos de demostración cuando el backend no está disponible."""
-        import random
+    
         demo_findings = [
             {"level": "critical", "message": "Import no usado: 'os'",           "file": "main.py",      "line": 3},
             {"level": "critical", "message": "Dependencia circular detectada",   "file": "utils/db.py",  "line": 0},

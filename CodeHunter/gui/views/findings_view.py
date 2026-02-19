@@ -4,8 +4,9 @@ Compatible con Finding dataclass (atributos) y dict (modo demo).
 """
 
 import customtkinter as ctk
-from tkinter import filedialog, messagebox
+from tkinter import messagebox
 from gui.utils import get_level as _level, get_attr as _attr
+from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
 
 
 class FindingsView(ctk.CTkFrame):
@@ -139,7 +140,6 @@ class FindingsView(ctk.CTkFrame):
             messagebox.showwarning("Sin datos", "Ejecuta un análisis antes de exportar.")
             return
         try:
-            from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
 
             finds  = self.state.findings
             score  = self.state.health_score
