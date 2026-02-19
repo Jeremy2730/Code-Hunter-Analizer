@@ -5,7 +5,7 @@ Compatible con Finding dataclass (atributos) y dict (modo demo).
 
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
-from gui.utils import level as _level, attr as _attr
+from gui.utils import get_level as _level, get_attr as _attr
 
 
 class FindingsView(ctk.CTkFrame):
