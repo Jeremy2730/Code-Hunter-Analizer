@@ -5,6 +5,7 @@ Compatible con Finding dataclass (atributos) y dict (modo demo).
 
 import math
 import customtkinter as ctk
+from gui.utils import level as _level, attr as _attr
 
 
 def _level(f) -> str:
