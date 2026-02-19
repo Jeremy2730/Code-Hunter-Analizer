@@ -37,7 +37,8 @@ class CodeHunterApp(ctk.CTk):
         super().__init__()
 
         # ── Estado compartido de la app ────────────────────────────────────────
-        self.state = AppState()
+        # OJO: NO usar self.state — Tkinter ya usa state() internamente
+        self.app_state = AppState()
 
         # ── Configuración de ventana ───────────────────────────────────────────
         self.title("CodeHunter  •  Analizador de Proyectos Python")
@@ -53,7 +54,7 @@ class CodeHunterApp(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
 
         # Sidebar
-        self.sidebar = Sidebar(self, self.state, self._navigate, COLORS)
+        self.sidebar = Sidebar(self, self.app_state, self._navigate, COLORS)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
 
         # Área de contenido
@@ -83,7 +84,7 @@ class CodeHunterApp(ctk.CTk):
             "search":    SearchView,
         }
         for name, ViewClass in view_classes.items():
-            view = ViewClass(self.content_frame, self.state, COLORS)
+            view = ViewClass(self.content_frame, self.app_state, COLORS)
             view.grid(row=0, column=0, sticky="nsew")
             self._views[name] = view
 
