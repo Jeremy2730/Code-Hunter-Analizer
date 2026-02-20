@@ -17,7 +17,7 @@ class FindingsView(ctk.CTkFrame):
         self._filter = "all"
         self._build_findings()
         self.state.subscribe(self._on_findings_update)
-        
+
         self.bind("<Map>", lambda e: self._render_findings())
 
     def _build_findings(self):
@@ -80,25 +80,31 @@ class FindingsView(ctk.CTkFrame):
         for w in self.list_frame.winfo_children():
             w.destroy()
 
-        C        = self.colors
-        finds    = self.state.findings
+        C      = self.colors
+        finds  = self.state.findings
+        status = self.state.status  # ← revisar el status
+
         filtered = finds if self._filter == "all" else [f for f in finds if _level(f) == self._filter]
 
         if not filtered:
-            if not finds:
-                msg  = "Ejecuta un diagnóstico para ver los hallazgos."
+            if status != "DONE":
+                # Aún no se ha ejecutado ningún análisis
+                msg   = "Ejecuta un diagnóstico para ver los hallazgos."
                 color = C["text_muted"]
             elif self._filter == "all":
-                msg  = "✅  No se detectaron problemas en el proyecto."
+                # Se ejecutó y no hay problemas
+                msg   = "✅  No se detectaron problemas en el proyecto."
                 color = C["accent_green"]
             else:
-                msg  = f"No hay hallazgos de tipo '{self._filter}' en este proyecto."
+                # Se ejecutó pero no hay de este tipo
+                msg   = f"No hay hallazgos de tipo '{self._filter}'."
                 color = C["text_muted"]
 
             ctk.CTkLabel(self.list_frame,
-                text=msg, font=ctk.CTkFont(size=36), text_color=color,
+                text=msg, font=ctk.CTkFont(size=13), text_color=color,
             ).pack(pady=40)
             return
+  
 
         level_meta = {
             "critical": ("🔴", C["accent_red"],    "CRÍTICO"),
