@@ -18,9 +18,8 @@ class FindingsView(ctk.CTkFrame):
         self._build_findings()
         self.state.subscribe(self._on_findings_update)
 
-         # ── Si ya hay datos cargados al iniciar, mostrarlos de inmediato ──
-        if self.state.findings or self.state.status == "DONE":
-            self._render_findings()
+        # Detecta cuando esta vista se hace visible
+        self.bind("<Visibility>", lambda e: self._render_findings())
 
     def _build_findings(self):
         C = self.colors
