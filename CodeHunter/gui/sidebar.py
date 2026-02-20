@@ -2,6 +2,7 @@
 CodeHunter GUI - Sidebar
 Panel lateral con: logo, selector de carpeta, navegación, botón de análisis.
 """
+
 import os
 import threading
 import customtkinter as ctk
@@ -17,21 +18,27 @@ class Sidebar(ctk.CTkFrame):
             fg_color=colors["bg_panel"],
             corner_radius=0,
         )
-        self.grid_propagate(False)          # Ancho fijo
-        self.grid_rowconfigure(5, weight=1) # Espacio flexible antes del footer
+        self.grid_propagate(False)
+        self.grid_rowconfigure(5, weight=1)
 
-        self.state      = state
-        self.navigate   = navigate_fn
-        self.colors     = colors
-        self._nav_btns  = {}
+        self.state     = state
+        self.navigate  = navigate_fn
+        self.colors    = colors
+        self._nav_btns = {}
 
         self._build_sidebar()
 
     # ──────────────────────────────────────────────────────────────────────────
     def _build_sidebar(self):
-        C = self.colors
+        """Director: construye el sidebar llamando a sub-funciones."""
+        self._build_logo()
+        self._build_folder_selector()
+        self._build_run_button()
+        self._build_navigation()
+        self._build_footer()
 
-        # ── Logo ──────────────────────────────────────────────────────────────
+    def _build_logo(self):
+        C = self.colors
         logo_frame = ctk.CTkFrame(self, fg_color="transparent")
         logo_frame.grid(row=0, column=0, padx=20, pady=(24, 8), sticky="w")
 
@@ -56,7 +63,8 @@ class Sidebar(ctk.CTkFrame):
             text_color=C["text_muted"],
         ).grid(row=1, column=0, padx=20, pady=(0, 20), sticky="w")
 
-        # ── Selector de carpeta ───────────────────────────────────────────────
+    def _build_folder_selector(self):
+        C = self.colors
         section_label(self, "PROYECTO", C).grid(
             row=2, column=0, padx=20, pady=(0, 6), sticky="w"
         )
@@ -87,7 +95,8 @@ class Sidebar(ctk.CTkFrame):
             command=self._pick_folder,
         ).grid(row=1, column=0, padx=8, pady=(0, 8), sticky="ew")
 
-        # ── Botón de análisis ─────────────────────────────────────────────────
+    def _build_run_button(self):
+        C = self.colors
         self.run_btn = ctk.CTkButton(
             self,
             text="▶  Ejecutar diagnóstico",
@@ -101,22 +110,23 @@ class Sidebar(ctk.CTkFrame):
         )
         self.run_btn.grid(row=4, column=0, padx=12, pady=(0, 24), sticky="ew")
 
-        # ── Navegación ────────────────────────────────────────────────────────
+    def _build_navigation(self):
+        C = self.colors
         section_label(self, "NAVEGACIÓN", C).grid(
             row=5, column=0, padx=20, pady=(0, 6), sticky="nw"
         )
 
         nav_items = [
-            ("dashboard", "◈  Dashboard",    "Resumen del análisis"),
-            ("findings",  "⚠  Hallazgos",    "Lista de problemas"),
-            ("tree",      "🌲  Árbol",         "Estructura del proyecto"),
-            ("search",    "🔍  Buscar",        "Búsqueda en código"),
+            ("dashboard", "◈  Dashboard"),
+            ("findings",  "⚠  Hallazgos"),
+            ("tree",      "🌲  Árbol"),
+            ("search",    "🔍  Buscar"),
         ]
 
         nav_frame = ctk.CTkFrame(self, fg_color="transparent")
         nav_frame.grid(row=5, column=0, padx=12, pady=(20, 0), sticky="new")
 
-        for view_id, label, tooltip in nav_items:
+        for view_id, label in nav_items:
             btn = ctk.CTkButton(
                 nav_frame,
                 text=label,
@@ -132,11 +142,11 @@ class Sidebar(ctk.CTkFrame):
             btn.pack(fill="x", pady=2)
             self._nav_btns[view_id] = btn
 
-        # ── Footer ────────────────────────────────────────────────────────────
+    def _build_footer(self):
+        C = self.colors
         footer = ctk.CTkFrame(self, fg_color="transparent")
         footer.grid(row=6, column=0, padx=12, pady=16, sticky="sew")
 
-        # Switch tema
         self.theme_var = ctk.StringVar(value="dark")
         ctk.CTkSwitch(
             footer,
@@ -156,79 +166,50 @@ class Sidebar(ctk.CTkFrame):
         C = self.colors
         for vid, btn in self._nav_btns.items():
             if vid == view_name:
-                btn.configure(
-                    fg_color=C["bg_hover"],
-                    text_color=C["accent"],
-                )
+                btn.configure(fg_color=C["bg_hover"], text_color=C["accent"])
             else:
-                btn.configure(
-                    fg_color="transparent",
-                    text_color=C["text_muted"],
-                )
+                btn.configure(fg_color="transparent", text_color=C["text_muted"])
 
     def _pick_folder(self):
         path = filedialog.askdirectory(title="Selecciona el proyecto Python")
         if path:
             self.state.project_path = path
             short = os.path.basename(path) or path
-            self.path_label.configure(text=f"📂  {short}", text_color=self.colors["text_primary"])
+            self.path_label.configure(
+                text=f"📂  {short}", text_color=self.colors["text_primary"]
+            )
             self.state.reset()
             self.state.notify("folder_selected", path)
 
     def _run_analysis(self):
         if not self.state.project_path:
             self.path_label.configure(
-                text="⚠ Selecciona una carpeta", text_color=self.colors["accent_yellow"]
+                text="⚠ Selecciona una carpeta",
+                text_color=self.colors["accent_yellow"]
             )
             return
 
         self.run_btn.configure(text="⏳  Analizando...", state="disabled")
         self.state.status = "RUNNING"
         self.state.notify("analysis_started")
-
         threading.Thread(target=self._do_analysis, daemon=True).start()
 
     def _do_analysis(self):
         """Corre en hilo secundario para no bloquear la UI."""
         try:
-            # ── Integración con tu backend ────────────────────────────────────
-
             result = run_code_doctor(self.state.project_path)
-
             self.state.diagnosis_data = result
             self.state.findings       = result.get("findings", [])
             self.state.health_score   = result.get("health_score", 0.0)
             self.state.status         = "DONE"
             self.state.notify("analysis_done", result)
 
-        except ImportError:
-            # Backend no encontrado → modo DEMO con datos ficticios
-            self._load_demo_data()
-
         except Exception as e:
             self.state.status = "ERROR"
             self.state.notify("analysis_error", str(e))
 
         finally:
-            # Volver al hilo principal para actualizar la UI
             self.after(0, self._restore_run_btn)
-
-    def _load_demo_data(self):
-        """Datos de demostración cuando el backend no está disponible."""
-    
-        demo_findings = [
-            {"level": "critical", "message": "Import no usado: 'os'",           "file": "main.py",      "line": 3},
-            {"level": "critical", "message": "Dependencia circular detectada",   "file": "utils/db.py",  "line": 0},
-            {"level": "warning",  "message": "Función duplicada: 'parse_data'",  "file": "helpers.py",   "line": 42},
-            {"level": "warning",  "message": "Wildcard import: from utils import *", "file": "app.py",   "line": 1},
-            {"level": "info",     "message": "Función sin docstring: 'get_user'","file": "models.py",   "line": 18},
-            {"level": "info",     "message": "Archivo grande (800 líneas)",      "file": "services.py",  "line": 0},
-        ]
-        self.state.diagnosis_data = {"findings": demo_findings, "health_score": 67.0}
-        self.state.findings       = demo_findings
-        self.state.health_score   = 67.0
-        self.state.status         = "DONE"
-        self.state.notify("analysis_done", self.state.diagnosis_data)
 
     def _restore_run_btn(self):
         self.run_btn.configure(text="▶  Ejecutar diagnóstico", state="normal")
