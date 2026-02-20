@@ -5,6 +5,7 @@ Panel lateral con: logo, selector de carpeta, navegación, botón de análisis.
 
 import os
 import threading
+import traceback
 import customtkinter as ctk
 from tkinter import filedialog
 from CodeHunter.analyzers.system_doctor import run_code_doctor
@@ -208,7 +209,7 @@ class Sidebar(ctk.CTkFrame):
             self.state.status = "ERROR"
             self.state.notify("analysis_error", str(e))
             # Temporal: imprime el error completo en la terminal
-            import traceback
+
             traceback.print_exc()
 
         finally:
