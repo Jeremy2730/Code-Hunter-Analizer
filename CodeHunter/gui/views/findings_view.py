@@ -17,9 +17,8 @@ class FindingsView(ctk.CTkFrame):
         self._filter = "all"
         self._build_findings()
         self.state.subscribe(self._on_findings_update)
-
-        # Detecta cuando esta vista se hace visible
-        self.bind("<Visibility>", lambda e: self._render_findings())
+        
+        self.bind("<Map>", lambda e: self._render_findings())
 
     def _build_findings(self):
         C = self.colors
