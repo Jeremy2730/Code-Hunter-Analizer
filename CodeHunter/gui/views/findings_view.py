@@ -83,10 +83,18 @@ class FindingsView(ctk.CTkFrame):
         filtered = finds if self._filter == "all" else [f for f in finds if _level(f) == self._filter]
 
         if not filtered:
+            if not finds:
+                msg  = "Ejecuta un diagnóstico para ver los hallazgos."
+                color = C["text_muted"]
+            elif self._filter == "all":
+                msg  = "✅  No se detectaron problemas en el proyecto."
+                color = C["accent_green"]
+            else:
+                msg  = f"No hay hallazgos de tipo '{self._filter}' en este proyecto."
+                color = C["text_muted"]
+
             ctk.CTkLabel(self.list_frame,
-                text="No hay hallazgos en esta categoría." if finds else
-                     "Ejecuta un diagnóstico para ver los hallazgos.",
-                font=ctk.CTkFont(size=13), text_color=C["text_muted"],
+                text=msg, font=ctk.CTkFont(size=36), text_color=color,
             ).pack(pady=40)
             return
 

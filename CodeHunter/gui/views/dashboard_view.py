@@ -166,7 +166,7 @@ class DashboardView(ctk.CTkFrame):
         if not finds:
             ctk.CTkLabel(self.recent_frame,
                 text="✅  No se detectaron problemas en el proyecto.",
-                font=ctk.CTkFont(size=13), text_color=C["accent_green"],
+                font=ctk.CTkFont(size=36), text_color=C["accent_green"],
             ).pack(pady=40)
             return
 
