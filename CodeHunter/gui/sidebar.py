@@ -196,22 +196,21 @@ class Sidebar(ctk.CTkFrame):
         threading.Thread(target=self._do_analysis, daemon=True).start()
 
     def _do_analysis(self):
-        """Corre en hilo secundario para no bloquear la UI."""
+        print("Iniciando análisis de:", self.state.project_path)
         try:
+            print("Importando backend...")
             result = run_code_doctor(self.state.project_path)
+            print("Resultado:", result)
             self.state.diagnosis_data = result
             self.state.findings       = result.get("findings", [])
-            self.state.health_score = result.get("score", 0.0)
+            self.state.health_score   = result.get("score", 0.0)
             self.state.status         = "DONE"
             self.state.notify("analysis_done", result)
-
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             self.state.status = "ERROR"
             self.state.notify("analysis_error", str(e))
-            # Temporal: imprime el error completo en la terminal
-
-            traceback.print_exc()
-
         finally:
             self.after(0, self._restore_run_btn)
 
