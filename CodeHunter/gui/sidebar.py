@@ -207,6 +207,9 @@ class Sidebar(ctk.CTkFrame):
         except Exception as e:
             self.state.status = "ERROR"
             self.state.notify("analysis_error", str(e))
+            # Temporal: imprime el error completo en la terminal
+            import traceback
+            traceback.print_exc()
 
         finally:
             self.after(0, self._restore_run_btn)
