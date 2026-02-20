@@ -112,14 +112,11 @@ class DashboardView(ctk.CTkFrame):
         canvas.create_arc(cx-r, cy-r, cx+r, cy+r,
             start=-start, extent=-extent, outline=color, width=thickness, style="arc")
 
-    def _on_state_change(self, event, data):
+
+    def _on_analysis_update(self, event, data):
         if event == "analysis_started": self.after(0, self._show_loading)
         elif event == "analysis_done":  self.after(0, self._refresh)
         elif event == "reset":          self.after(0, self._clear)
-
-    def _on_analysis_update(self):
-        self.status_badge.configure(text="  ANALIZANDO...  ",
-            fg_color=self.colors["accent"], text_color="#FFFFFF")
 
     def _refresh(self):
         C     = self.colors

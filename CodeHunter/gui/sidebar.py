@@ -207,7 +207,6 @@ class Sidebar(ctk.CTkFrame):
             self.state.status         = "DONE"
             self.state.notify("analysis_done", result)
         except Exception as e:
-            import traceback
             traceback.print_exc()
             self.state.status = "ERROR"
             self.state.notify("analysis_error", str(e))
