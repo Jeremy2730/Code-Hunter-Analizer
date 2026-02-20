@@ -101,10 +101,10 @@ class FindingsView(ctk.CTkFrame):
                 color = C["text_muted"]
 
             ctk.CTkLabel(self.list_frame,
-                text=msg, font=ctk.CTkFont(size=13), text_color=color,
+                text=msg, font=ctk.CTkFont(size=36), text_color=color,
             ).pack(pady=40)
             return
-  
+        
 
         level_meta = {
             "critical": ("🔴", C["accent_red"],    "CRÍTICO"),
