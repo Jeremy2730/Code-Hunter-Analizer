@@ -200,7 +200,7 @@ class Sidebar(ctk.CTkFrame):
             result = run_code_doctor(self.state.project_path)
             self.state.diagnosis_data = result
             self.state.findings       = result.get("findings", [])
-            self.state.health_score   = result.get("health_score", 0.0)
+            self.state.health_score = result.get("score", 0.0)
             self.state.status         = "DONE"
             self.state.notify("analysis_done", result)
 
