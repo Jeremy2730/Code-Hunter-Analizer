@@ -1,12 +1,10 @@
 """
 CodeHunter GUI - Vista Hallazgos
-Compatible con Finding dataclass (atributos) y dict (modo demo).
+Lista filtrable de todos los problemas detectados.
 """
 
 import customtkinter as ctk
-from tkinter import messagebox
 from gui.utils import get_level as _level, get_attr as _attr
-from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
 
 
 class FindingsView(ctk.CTkFrame):
@@ -23,24 +21,15 @@ class FindingsView(ctk.CTkFrame):
     def _build_findings(self):
         C = self.colors
 
+        # ── Header ────────────────────────────────────────────────────────────
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, padx=30, pady=(28, 0), sticky="ew")
-        header.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(header, text="Hallazgos",
             font=ctk.CTkFont(size=24, weight="bold"), text_color=C["text_primary"],
-        ).grid(row=0, column=0, sticky="w")
+        ).pack(side="left")
 
-        self.export_btn = ctk.CTkButton(header,
-            text="📄  Exportar PDF",
-            font=ctk.CTkFont(size=12, weight="bold"), height=36,
-            fg_color=C["bg_card"], hover_color=C["bg_hover"],
-            text_color=C["accent"], corner_radius=8,
-            border_width=1, border_color=C["border"],
-            command=self._export_pdf,
-        )
-        self.export_btn.grid(row=0, column=1, sticky="e")
-
+        # ── Filtros ───────────────────────────────────────────────────────────
         filter_bar = ctk.CTkFrame(self, fg_color="transparent")
         filter_bar.grid(row=1, column=0, padx=30, pady=16, sticky="w")
 
@@ -63,6 +52,7 @@ class FindingsView(ctk.CTkFrame):
             btn.pack(side="left", padx=4)
             self._filter_btns[fid] = btn
 
+        # ── Lista ─────────────────────────────────────────────────────────────
         self.list_frame = ctk.CTkScrollableFrame(self, fg_color=C["bg_dark"], corner_radius=0)
         self.list_frame.grid(row=2, column=0, padx=30, pady=(0, 24), sticky="nsew")
         self.list_frame.grid_columnconfigure(0, weight=1)
@@ -88,8 +78,8 @@ class FindingsView(ctk.CTkFrame):
         for w in self.list_frame.winfo_children():
             w.destroy()
 
-        C       = self.colors
-        finds   = self.state.findings
+        C        = self.colors
+        finds    = self.state.findings
         filtered = finds if self._filter == "all" else [f for f in finds if _level(f) == self._filter]
 
         if not filtered:
@@ -115,17 +105,17 @@ class FindingsView(ctk.CTkFrame):
             row.grid_columnconfigure(1, weight=1)
 
             indicator = ctk.CTkFrame(row, width=4, fg_color=color, corner_radius=2)
-            indicator.grid(row=0, column=0, rowspan=2, sticky="ns", padx=(0, 12), pady=0)
+            indicator.grid(row=0, column=0, rowspan=2, sticky="ns", padx=(0, 12))
             indicator.grid_propagate(False)
 
             ctk.CTkLabel(row, text=f"{icon} {label}",
                 font=ctk.CTkFont(size=11, weight="bold"), text_color=color,
-            ).grid(row=0, column=1, padx=0, pady=(12, 2), sticky="w")
+            ).grid(row=0, column=1, pady=(12, 2), sticky="w")
 
             ctk.CTkLabel(row, text=str(_attr(finding, "message")),
                 font=ctk.CTkFont(size=13), text_color=C["text_primary"],
                 anchor="w", wraplength=600,
-            ).grid(row=1, column=1, padx=0, pady=(0, 12), sticky="w")
+            ).grid(row=1, column=1, pady=(0, 12), sticky="w")
 
             file_info = str(_attr(finding, "file"))
             line_info = _attr(finding, "line", 0)
@@ -134,39 +124,6 @@ class FindingsView(ctk.CTkFrame):
                 ctk.CTkLabel(row, text=location,
                     font=ctk.CTkFont(size=11), text_color=C["text_muted"],
                 ).grid(row=0, column=2, rowspan=2, padx=16, pady=12, sticky="e")
-
-    def _export_pdf(self):
-        if not self.state.findings:
-            messagebox.showwarning("Sin datos", "Ejecuta un análisis antes de exportar.")
-            return
-        try:
-
-            finds  = self.state.findings
-            score  = self.state.health_score
-            críticos = sum(1 for f in finds if _level(f) == "critical")
-            warnings = sum(1 for f in finds if _level(f) == "warning")
-
-            profile_description = (
-                f"Proyecto: {self.state.project_path}\n"
-                f"Archivos analizados: {self.state.diagnosis_data.get('files_analyzed', 'N/A')}"
-            )
-
-            analysis_data = {
-                "score":    score,
-                "critical": críticos,
-                "warnings": warnings,
-                "findings": finds,
-            }
-
-            output_path = export_report_to_pdf(
-                self.state.project_path,
-                profile_description,
-                analysis_data,
-            )
-            messagebox.showinfo("✅ Exportado", f"PDF guardado en:\n{output_path}")
-
-        except Exception as e:
-            messagebox.showerror("Error", f"No se pudo exportar:\n{e}")
 
     def _on_findings_update(self, event, data):
         if event in ("analysis_done", "reset"):
