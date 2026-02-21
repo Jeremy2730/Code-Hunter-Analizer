@@ -133,30 +133,36 @@ class FindingsView(ctk.CTkFrame):
             # ── Card compacta: UNA sola fila (nivel + mensaje juntos) ─────────
             # Antes eran 2 filas (nivel arriba, mensaje abajo) → mucho alto
             # Ahora todo en fila 0 → card de altura mínima
-            row = ctk.CTkFrame(self.list_frame, fg_color=C["bg_card"], corner_radius=6)
-            row.pack(fill="x", pady=1)          # pady=1 → espacio mínimo entre cards
+            # Card estilo dashboard - 2 filas con padding moderado
+            row = ctk.CTkFrame(self.list_frame, fg_color=C["bg_card"], corner_radius=8)
+            row.pack(fill="x", pady=4)
             row.grid_columnconfigure(1, weight=1)
 
-            # Barra de color lateral (indica el nivel visualmente)
-            indicator = ctk.CTkFrame(row, width=3, fg_color=color, corner_radius=2)
-            indicator.grid(row=0, column=0, sticky="ns", padx=(0, 10))
+            indicator = ctk.CTkFrame(row, width=4, fg_color=color, corner_radius=2)
+            indicator.grid(row=0, column=0, rowspan=2, sticky="ns", padx=(0, 12))
             indicator.grid_propagate(False)
 
-            # Nivel y mensaje en la misma celda → reduce altura al mínimo
+            # Fila 1 - nivel
             ctk.CTkLabel(row,
-                text=f"{icon} {label}  —  {str(_attr(finding, 'message'))}",
+                text=f"{icon} {label}",
+                font=ctk.CTkFont(size=11, weight="bold"), text_color=color,
+            ).grid(row=0, column=1, pady=(8, 2), sticky="w")
+
+            # Fila 2 - mensaje
+            ctk.CTkLabel(row,
+                text=str(_attr(finding, "message")),
                 font=ctk.CTkFont(size=12), text_color=C["text_primary"],
                 anchor="w", wraplength=580,
-            ).grid(row=0, column=1, padx=0, pady=6, sticky="w")
+            ).grid(row=1, column=1, pady=(0, 8), sticky="w")
 
-            # Archivo y línea alineados a la derecha
+            # Archivo y línea a la derecha
             file_info = str(_attr(finding, "file"))
             line_info = _attr(finding, "line", 0)
             if file_info:
                 location = f"📄 {file_info}" + (f" : {line_info}" if line_info else "")
                 ctk.CTkLabel(row, text=location,
                     font=ctk.CTkFont(size=10), text_color=C["text_muted"],
-                ).grid(row=0, column=2, padx=10, pady=6, sticky="e")
+                ).grid(row=0, column=2, rowspan=2, padx=12, pady=8, sticky="e")
 
     def _on_findings_update(self, event, data):
         # ── Redibuja cuando llega un nuevo análisis o se resetea ──────────────
