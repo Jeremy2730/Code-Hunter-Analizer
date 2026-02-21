@@ -131,23 +131,8 @@ class CodeHunterApp(ctk.CTk):
             )
             return
 
-        name   = os.path.basename(path)
-        status = self.app_state.status
-
-        if status == "RUNNING":
-            text  = f"⏳  Analizando  {name}..."
-            color = COLORS["accent"]
-        elif status == "DONE":
-            score = self.app_state.health_score
-            if score >= 80:   icon, color = "✅", COLORS["accent_green"]
-            elif score >= 50: icon, color = "⚠️", COLORS["accent_yellow"]
-            else:             icon, color = "🔴", COLORS["accent_red"]
-            text = f"{icon}  {name}  •  Score: {score:.0f}"
-        elif status == "ERROR":
-            text  = f"❌  Error al analizar  {name}"
-            color = COLORS["accent_red"]
-        else:
-            text  = f"📂  {name}"
-            color = COLORS["text_primary"]
-
-        self.project_title_label.configure(text=text, text_color=color)
+        name = os.path.basename(path)
+        self.project_title_label.configure(
+            text=f"📂  {name}",
+            text_color=COLORS["text_primary"],
+        )
