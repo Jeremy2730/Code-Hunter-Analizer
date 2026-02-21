@@ -57,7 +57,7 @@ class Sidebar(ctk.CTkFrame):
 
         # Solo botón, sin path_label
         ctk.CTkButton(folder_frame,
-            text="📁  Abrir carpeta",
+            text=" Abrir carpeta",
             font=ctk.CTkFont(size=12), height=32,
             fg_color=C["bg_hover"], hover_color=C["border"],
             text_color=C["text_primary"], corner_radius=6,

@@ -105,7 +105,7 @@ class FindingsView(ctk.CTkFrame):
 
             # Card compacta
             row = ctk.CTkFrame(self.list_frame, fg_color=C["bg_card"], corner_radius=6)
-            row.pack(fill="x", pady=2)
+            row.pack(fill="x", pady=2)      # ← espacio ENTRE cards
             row.grid_columnconfigure(1, weight=1)
 
             indicator = ctk.CTkFrame(row, width=3, fg_color=color, corner_radius=2)
@@ -114,12 +114,12 @@ class FindingsView(ctk.CTkFrame):
 
             ctk.CTkLabel(row, text=f"{icon} {label}",
                 font=ctk.CTkFont(size=10, weight="bold"), text_color=color,
-            ).grid(row=0, column=1, pady=(5, 0), sticky="w")
+            ).grid(row=0, column=1, pady=(3, 0), sticky="w")   
 
             ctk.CTkLabel(row, text=str(_attr(finding, "message")),
                 font=ctk.CTkFont(size=12), text_color=C["text_primary"],
                 anchor="w", wraplength=580,
-            ).grid(row=1, column=1, pady=(0, 5), sticky="w")
+            ).grid(row=1, column=1, pady=(0, 3), sticky="w")   # ← padding ABAJO
 
             file_info = str(_attr(finding, "file"))
             line_info = _attr(finding, "line", 0)
