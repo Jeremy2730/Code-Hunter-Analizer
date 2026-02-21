@@ -3,7 +3,6 @@ CodeHunter GUI - Vista Hallazgos
 Lista filtrable de todos los problemas detectados.
 """
 
-import os
 import customtkinter as ctk
 from gui.utils import get_level as _level, get_attr as _attr
 
@@ -23,7 +22,6 @@ class FindingsView(ctk.CTkFrame):
     def _build_findings(self):
         C = self.colors
 
-        # ── Header ────────────────────────────────────────────────────────────
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, padx=30, pady=(28, 0), sticky="ew")
 
@@ -31,12 +29,6 @@ class FindingsView(ctk.CTkFrame):
             font=ctk.CTkFont(size=24, weight="bold"), text_color=C["text_primary"],
         ).pack(side="left")
 
-        self.project_title = ctk.CTkLabel(header, text="",
-            font=ctk.CTkFont(size=13), text_color=C["text_muted"],
-        )
-        self.project_title.pack(side="left", padx=16)
-
-        # ── Filtros ───────────────────────────────────────────────────────────
         filter_bar = ctk.CTkFrame(self, fg_color="transparent")
         filter_bar.grid(row=1, column=0, padx=30, pady=16, sticky="w")
 
@@ -59,7 +51,6 @@ class FindingsView(ctk.CTkFrame):
             btn.pack(side="left", padx=4)
             self._filter_btns[fid] = btn
 
-        # ── Lista ─────────────────────────────────────────────────────────────
         self.list_frame = ctk.CTkScrollableFrame(self, fg_color=C["bg_dark"], corner_radius=0)
         self.list_frame.grid(row=2, column=0, padx=30, pady=(0, 24), sticky="nsew")
         self.list_frame.grid_columnconfigure(0, weight=1)
@@ -68,10 +59,6 @@ class FindingsView(ctk.CTkFrame):
             text="Ejecuta un diagnóstico para ver los hallazgos.",
             font=ctk.CTkFont(size=13), text_color=C["text_muted"],
         ).pack(pady=40)
-
-    def _update_project_title(self):
-        name = os.path.basename(self.state.project_path) if self.state.project_path else ""
-        self.project_title.configure(text=f"📂  {name}" if name else "")
 
     def _set_filter(self, filter_id: str):
         C = self.colors
@@ -92,9 +79,6 @@ class FindingsView(ctk.CTkFrame):
         C      = self.colors
         finds  = self.state.findings
         status = self.state.status
-
-        self._update_project_title()
-
         filtered = finds if self._filter == "all" else [f for f in finds if _level(f) == self._filter]
 
         if not filtered:
@@ -107,7 +91,6 @@ class FindingsView(ctk.CTkFrame):
             else:
                 msg   = f"No hay hallazgos de tipo '{self._filter}'."
                 color = C["text_muted"]
-
             ctk.CTkLabel(self.list_frame,
                 text=msg, font=ctk.CTkFont(size=13), text_color=color,
             ).pack(pady=40)

@@ -3,7 +3,6 @@ CodeHunter GUI - Vista Dashboard
 Gauge circular de salud + contadores + exportar PDF.
 """
 
-import os
 import math
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
@@ -40,12 +39,6 @@ class DashboardView(ctk.CTkFrame):
             fg_color=C["bg_card"], text_color=C["text_muted"], corner_radius=6,
         )
         self.status_badge.pack(side="left", padx=16)
-
-        # Nombre del proyecto analizado
-        self.project_title = ctk.CTkLabel(title_row, text="",
-            font=ctk.CTkFont(size=13), text_color=C["text_muted"],
-        )
-        self.project_title.pack(side="left", padx=8)
 
         self.export_btn = ctk.CTkButton(header,
             text="📄  Exportar PDF",
@@ -135,17 +128,12 @@ class DashboardView(ctk.CTkFrame):
         canvas.create_arc(cx-r, cy-r, cx+r, cy+r,
             start=-start, extent=-extent, outline=color, width=thickness, style="arc")
 
-    def _update_project_title(self):
-        name = os.path.basename(self.state.project_path) if self.state.project_path else ""
-        self.project_title.configure(text=f"📂  {name}" if name else "")
-
     def _on_analysis_update(self, event, data):
         if event == "analysis_started": self.after(0, self._show_loading)
         elif event == "analysis_done":  self.after(0, self._refresh)
         elif event == "reset":          self.after(0, self._clear)
 
     def _show_loading(self):
-        self._update_project_title()
         self.status_badge.configure(text="  ANALIZANDO...  ",
             fg_color=self.colors["accent"], text_color="#FFFFFF")
 
@@ -154,7 +142,6 @@ class DashboardView(ctk.CTkFrame):
         score = self.state.health_score
         finds = self.state.findings
 
-        self._update_project_title()
         self._draw_gauge(score)
         self.score_label.configure(text=f"{score:.0f}")
 
@@ -241,7 +228,6 @@ class DashboardView(ctk.CTkFrame):
             messagebox.showerror("Error", f"No se pudo exportar:\n{e}")
 
     def _clear(self):
-        self.project_title.configure(text="")
         self._draw_gauge(0)
         self.score_label.configure(text="—")
         self.status_badge.configure(text="  SIN ANALIZAR  ",

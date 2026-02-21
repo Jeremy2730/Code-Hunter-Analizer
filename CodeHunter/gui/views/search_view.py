@@ -16,25 +16,14 @@ class SearchView(ctk.CTkFrame):
         self.state  = state
         self.colors = colors
         self._build_search()
-        self.state.subscribe(self._on_search_update)
 
     def _build_search(self):
         C = self.colors
 
-        # ── Header ────────────────────────────────────────────────────────────
-        header = ctk.CTkFrame(self, fg_color="transparent")
-        header.grid(row=0, column=0, padx=30, pady=(28, 16), sticky="ew")
-
-        ctk.CTkLabel(header, text="Buscar en el código",
+        ctk.CTkLabel(self, text="Buscar en el código",
             font=ctk.CTkFont(size=24, weight="bold"), text_color=C["text_primary"],
-        ).pack(side="left")
+        ).grid(row=0, column=0, padx=30, pady=(28, 16), sticky="w")
 
-        self.project_title = ctk.CTkLabel(header, text="",
-            font=ctk.CTkFont(size=13), text_color=C["text_muted"],
-        )
-        self.project_title.pack(side="left", padx=16)
-
-        # ── Barra de búsqueda ─────────────────────────────────────────────────
         search_bar = ctk.CTkFrame(self, fg_color="transparent")
         search_bar.grid(row=1, column=0, padx=30, pady=(0, 16), sticky="ew")
         search_bar.grid_columnconfigure(0, weight=1)
@@ -55,7 +44,6 @@ class SearchView(ctk.CTkFrame):
             command=self._do_search,
         ).grid(row=0, column=1)
 
-        # ── Resultados ────────────────────────────────────────────────────────
         self.results_frame = ctk.CTkScrollableFrame(self, fg_color=C["bg_dark"], corner_radius=0)
         self.results_frame.grid(row=2, column=0, padx=30, pady=(0, 24), sticky="nsew")
 
@@ -64,12 +52,7 @@ class SearchView(ctk.CTkFrame):
             font=ctk.CTkFont(size=13), text_color=C["text_muted"],
         ).pack(pady=40)
 
-    def _update_project_title(self):
-        name = os.path.basename(self.state.project_path) if self.state.project_path else ""
-        self.project_title.configure(text=f"📂  {name}" if name else "")
-
     def _do_search(self):
-        self._update_project_title()
         query = self.search_entry.get().strip()
         if not query:
             return
@@ -149,7 +132,3 @@ class SearchView(ctk.CTkFrame):
         ctk.CTkLabel(self.results_frame,
             text=msg, font=ctk.CTkFont(size=13), text_color=self.colors["text_muted"],
         ).pack(pady=40)
-
-    def _on_search_update(self, event, data):
-        if event in ("folder_selected", "reset"):
-            self.after(0, self._update_project_title)

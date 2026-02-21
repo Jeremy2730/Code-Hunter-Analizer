@@ -1,8 +1,9 @@
 """
 CodeHunter GUI - Ventana Principal
-Layout: Sidebar izquierdo + Área de contenido principal
+Layout: Sidebar izquierdo + Barra de título + Área de contenido
 """
 
+import os
 import customtkinter as ctk
 from gui.sidebar import Sidebar
 from gui.views.dashboard_view import DashboardView
@@ -12,23 +13,21 @@ from gui.views.search_view import SearchView
 from gui.state import AppState
 
 
-# ── Tema global ────────────────────────────────────────────────────────────────
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-# Paleta de colores CodeHunter
 COLORS = {
-    "bg_dark":      "#0D1117",   # Fondo principal (GitHub dark)
-    "bg_panel":     "#161B22",   # Paneles / sidebar
-    "bg_card":      "#21262D",   # Tarjetas / cards
-    "bg_hover":     "#2D333B",   # Hover states
-    "accent":       "#58A6FF",   # Azul acento (GitHub blue)
-    "accent_green": "#3FB950",   # Healthy
-    "accent_yellow":"#D29922",   # Warning
-    "accent_red":   "#F85149",   # Critical
-    "text_primary": "#E6EDF3",   # Texto principal
-    "text_muted":   "#7D8590",   # Texto secundario
-    "border":       "#30363D",   # Bordes
+    "bg_dark":       "#0D1117",
+    "bg_panel":      "#161B22",
+    "bg_card":       "#21262D",
+    "bg_hover":      "#2D333B",
+    "accent":        "#58A6FF",
+    "accent_green":  "#3FB950",
+    "accent_yellow": "#D29922",
+    "accent_red":    "#F85149",
+    "text_primary":  "#E6EDF3",
+    "text_muted":    "#7D8590",
+    "border":        "#30363D",
 }
 
 
@@ -36,20 +35,14 @@ class CodeHunterApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # ── Estado compartido de la app ────────────────────────────────────────
-        # OJO: NO usar self.state — Tkinter ya usa state() internamente
         self.app_state = AppState()
 
-        # ── Configuración de ventana ───────────────────────────────────────────
         self.title("CodeHunter  •  Analizador de Proyectos Python")
         self.geometry("1280x800")
         self.minsize(1000, 650)
         self.configure(fg_color=COLORS["bg_dark"])
 
-        # Icono (si existe)
-        # self.iconbitmap("assets/icon.ico")
-
-        # ── Layout principal: sidebar (fijo) + contenido (expansible) ─────────
+        # ── Layout: sidebar | (titulo + contenido) ────────────────────────────
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -57,26 +50,51 @@ class CodeHunterApp(ctk.CTk):
         self.sidebar = Sidebar(self, self.app_state, self._navigate, COLORS)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
 
-        # Área de contenido
-        self.content_frame = ctk.CTkFrame(
-            self, fg_color=COLORS["bg_dark"], corner_radius=0
+        # Columna derecha: título arriba + contenido abajo
+        right_col = ctk.CTkFrame(self, fg_color=COLORS["bg_dark"], corner_radius=0)
+        right_col.grid(row=0, column=1, sticky="nsew")
+        right_col.grid_columnconfigure(0, weight=1)
+        right_col.grid_rowconfigure(1, weight=1)
+
+        # ── Barra de título del proyecto ──────────────────────────────────────
+        self.title_bar = ctk.CTkFrame(
+            right_col,
+            fg_color=COLORS["bg_panel"],
+            corner_radius=0,
+            height=48,
         )
-        self.content_frame.grid(row=0, column=1, sticky="nsew")
+        self.title_bar.grid(row=0, column=0, sticky="ew")
+        self.title_bar.grid_propagate(False)
+        self.title_bar.grid_columnconfigure(0, weight=1)
+
+        self.project_title_label = ctk.CTkLabel(
+            self.title_bar,
+            text="Ningún proyecto seleccionado",
+            font=ctk.CTkFont(size=36, weight="bold"),
+            text_color=COLORS["text_muted"],
+            anchor="center",
+        )
+        self.project_title_label.grid(row=0, column=0, sticky="nsew", padx=20)
+
+        # ── Área de contenido ─────────────────────────────────────────────────
+        self.content_frame = ctk.CTkFrame(
+            right_col, fg_color=COLORS["bg_dark"], corner_radius=0
+        )
+        self.content_frame.grid(row=1, column=0, sticky="nsew")
         self.content_frame.grid_columnconfigure(0, weight=1)
         self.content_frame.grid_rowconfigure(0, weight=1)
 
-        # ── Vistas registradas ─────────────────────────────────────────────────
+        # ── Vistas ────────────────────────────────────────────────────────────
         self._views: dict[str, ctk.CTkFrame] = {}
         self._active_view: str | None = None
-
         self._init_views()
 
-        # ── Vista inicial ──────────────────────────────────────────────────────
+        # Suscribirse a cambios de estado para actualizar el título
+        self.app_state.subscribe(self._on_state_change)
+
         self._navigate("dashboard")
 
-    # ──────────────────────────────────────────────────────────────────────────
     def _init_views(self):
-        """Crea todas las vistas y las apila en el mismo slot de la grilla."""
         view_classes = {
             "dashboard": DashboardView,
             "findings":  FindingsView,
@@ -89,12 +107,47 @@ class CodeHunterApp(ctk.CTk):
             self._views[name] = view
 
     def _navigate(self, view_name: str):
-        """Muestra la vista solicitada y oculta las demás."""
         for name, view in self._views.items():
             if name == view_name:
                 view.tkraise()
             else:
                 view.lower()
-
         self._active_view = view_name
         self.sidebar.set_active(view_name)
+
+    def _on_state_change(self, event, data):
+        """Actualiza la barra de título cuando se selecciona o analiza un proyecto."""
+        if event in ("folder_selected", "analysis_done", "analysis_started"):
+            self.after(0, self._update_title_bar)
+        elif event == "reset":
+            self.after(0, self._update_title_bar)
+
+    def _update_title_bar(self):
+        path = self.app_state.project_path
+        if not path:
+            self.project_title_label.configure(
+                text="Ningún proyecto seleccionado",
+                text_color=COLORS["text_muted"],
+            )
+            return
+
+        name   = os.path.basename(path)
+        status = self.app_state.status
+
+        if status == "RUNNING":
+            text  = f"⏳  Analizando  {name}..."
+            color = COLORS["accent"]
+        elif status == "DONE":
+            score = self.app_state.health_score
+            if score >= 80:   icon, color = "✅", COLORS["accent_green"]
+            elif score >= 50: icon, color = "⚠️", COLORS["accent_yellow"]
+            else:             icon, color = "🔴", COLORS["accent_red"]
+            text = f"{icon}  {name}  •  Score: {score:.0f}"
+        elif status == "ERROR":
+            text  = f"❌  Error al analizar  {name}"
+            color = COLORS["accent_red"]
+        else:
+            text  = f"📂  {name}"
+            color = COLORS["text_primary"]
+
+        self.project_title_label.configure(text=text, text_color=color)

@@ -87,7 +87,7 @@ class Sidebar(ctk.CTkFrame):
         self.project_name_label = ctk.CTkLabel(
             folder_frame,
             text="",
-            font=ctk.CTkFont(size=36, weight="bold"),
+            font=ctk.CTkFont(size=13, weight="bold"),
             text_color=C["text_primary"],
             anchor="center",
         )
