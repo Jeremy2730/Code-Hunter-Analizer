@@ -31,11 +31,10 @@ class FindingsView(ctk.CTkFrame):
             font=ctk.CTkFont(size=24, weight="bold"), text_color=C["text_primary"],
         ).pack(side="left")
 
-        # Nombre del proyecto analizado
-        self.project_label = ctk.CTkLabel(header, text="",
+        self.project_title = ctk.CTkLabel(header, text="",
             font=ctk.CTkFont(size=13), text_color=C["text_muted"],
         )
-        self.project_label.pack(side="left", padx=16)
+        self.project_title.pack(side="left", padx=16)
 
         # ── Filtros ───────────────────────────────────────────────────────────
         filter_bar = ctk.CTkFrame(self, fg_color="transparent")
@@ -70,6 +69,10 @@ class FindingsView(ctk.CTkFrame):
             font=ctk.CTkFont(size=13), text_color=C["text_muted"],
         ).pack(pady=40)
 
+    def _update_project_title(self):
+        name = os.path.basename(self.state.project_path) if self.state.project_path else ""
+        self.project_title.configure(text=f"📂  {name}" if name else "")
+
     def _set_filter(self, filter_id: str):
         C = self.colors
         self._filter = filter_id
@@ -90,9 +93,7 @@ class FindingsView(ctk.CTkFrame):
         finds  = self.state.findings
         status = self.state.status
 
-        # Actualizar nombre del proyecto en el header
-        name = os.path.basename(self.state.project_path) if self.state.project_path else ""
-        self.project_label.configure(text=f"📂  {name}" if name else "")
+        self._update_project_title()
 
         filtered = finds if self._filter == "all" else [f for f in finds if _level(f) == self._filter]
 
@@ -122,7 +123,6 @@ class FindingsView(ctk.CTkFrame):
             level = _level(finding)
             icon, color, label = level_meta.get(level, ("⚪", C["text_muted"], "INFO"))
 
-            # Card más compacta
             row = ctk.CTkFrame(self.list_frame, fg_color=C["bg_card"], corner_radius=8)
             row.pack(fill="x", pady=3)
             row.grid_columnconfigure(1, weight=1)
