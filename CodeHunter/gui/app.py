@@ -69,6 +69,7 @@ class CodeHunterApp(ctk.CTk):
 
         self.project_title_label = ctk.CTkLabel(
             self.title_bar,
+            text="Ningún proyecto seleccionado",
             font=ctk.CTkFont(size=36, weight="bold"),
             text_color=COLORS["text_muted"],
             anchor="center",
@@ -115,10 +116,7 @@ class CodeHunterApp(ctk.CTk):
         self.sidebar.set_active(view_name)
 
     def _on_state_change(self, event, data):
-        """Actualiza la barra de título cuando se selecciona o analiza un proyecto."""
-        if event in ("folder_selected", "analysis_done", "analysis_started"):
-            self.after(0, self._update_title_bar)
-        elif event == "reset":
+        if event in ("folder_selected", "analysis_done", "analysis_started", "reset"):
             self.after(0, self._update_title_bar)
 
     def _update_title_bar(self):
@@ -132,6 +130,6 @@ class CodeHunterApp(ctk.CTk):
 
         name = os.path.basename(path)
         self.project_title_label.configure(
-            text=f" {name}",
+            text=f"📂  {name}",
             text_color=COLORS["text_primary"],
         )
