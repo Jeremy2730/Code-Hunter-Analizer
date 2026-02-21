@@ -109,7 +109,7 @@ class FindingsView(ctk.CTkFrame):
             icon, color, label = level_meta.get(level, ("⚪", C["text_muted"], "INFO"))
 
             # ── Card igual al dashboard: pack horizontal, una sola fila ───────
-            row = ctk.CTkFrame(self.list_frame, fg_color=C["bg_card"], corner_radius=8, height=44)
+            row = ctk.CTkFrame(self.list_frame, fg_color=C["bg_card"], corner_radius=8, height=52)   #cambio de tamaó de cards
             row.pack(fill="x", pady=4)
             row.pack_propagate(False)  # ← esto impide que el contenido estire la card
 
@@ -120,14 +120,14 @@ class FindingsView(ctk.CTkFrame):
             # Nivel
             ctk.CTkLabel(row,
                 text=f"  {label}",
-                font=ctk.CTkFont(size=11, weight="bold"),
+                font=ctk.CTkFont(size=16, weight="bold"),
                 text_color=color, width=80, anchor="w",
             ).pack(side="left", pady=10)
 
             # Mensaje
             ctk.CTkLabel(row,
                 text=str(_attr(finding, "message")),
-                font=ctk.CTkFont(size=12), text_color=C["text_primary"], anchor="w",
+                font=ctk.CTkFont(size=14), text_color=C["text_primary"], anchor="w",
             ).pack(side="left", padx=8, pady=10)
 
             # Archivo y línea a la derecha
@@ -136,7 +136,7 @@ class FindingsView(ctk.CTkFrame):
             if file_info:
                 location = f"📄 {file_info}" + (f" : {line_info}" if line_info else "")
                 ctk.CTkLabel(row, text=location,
-                    font=ctk.CTkFont(size=10), text_color=C["text_muted"],
+                    font=ctk.CTkFont(size=12), text_color=C["text_muted"],
                 ).pack(side="right", padx=12, pady=10)
 
     def _on_findings_update(self, event, data):
