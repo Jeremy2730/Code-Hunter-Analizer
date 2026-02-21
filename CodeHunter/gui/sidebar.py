@@ -76,6 +76,7 @@ class Sidebar(ctk.CTkFrame):
 
         self.path_label = ctk.CTkLabel(
             folder_frame,
+            text="Ningún proyecto",
             font=ctk.CTkFont(size=11),
             text_color=C["text_muted"],
             wraplength=150,
@@ -94,6 +95,7 @@ class Sidebar(ctk.CTkFrame):
 
         ctk.CTkButton(
             folder_frame,
+            text="Abrir carpeta",
             font=ctk.CTkFont(size=12),
             height=32,
             fg_color=C["bg_hover"],
