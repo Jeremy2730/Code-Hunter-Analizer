@@ -83,16 +83,13 @@ class FindingsView(ctk.CTkFrame):
 
         if not filtered:
             if status != "DONE":
-                msg   = "Ejecuta un diagnóstico para ver los hallazgos."
-                color = C["text_muted"]
+                msg, color = "Ejecuta un diagnóstico para ver los hallazgos.", C["text_muted"]
             elif self._filter == "all":
-                msg   = "✅  No se detectaron problemas en el proyecto."
-                color = C["accent_green"]
+                msg, color = "✅  No se detectaron problemas en el proyecto.", C["accent_green"]
             else:
-                msg   = f"No hay hallazgos de tipo '{self._filter}'."
-                color = C["text_muted"]
-            ctk.CTkLabel(self.list_frame,
-                text=msg, font=ctk.CTkFont(size=13), text_color=color,
+                msg, color = f"No hay hallazgos de tipo '{self._filter}'.", C["text_muted"]
+            ctk.CTkLabel(self.list_frame, text=msg,
+                font=ctk.CTkFont(size=13), text_color=color,
             ).pack(pady=40)
             return
 
@@ -106,30 +103,31 @@ class FindingsView(ctk.CTkFrame):
             level = _level(finding)
             icon, color, label = level_meta.get(level, ("⚪", C["text_muted"], "INFO"))
 
-            row = ctk.CTkFrame(self.list_frame, fg_color=C["bg_card"], corner_radius=8)
-            row.pack(fill="x", pady=3)
+            # Card compacta
+            row = ctk.CTkFrame(self.list_frame, fg_color=C["bg_card"], corner_radius=6)
+            row.pack(fill="x", pady=2)
             row.grid_columnconfigure(1, weight=1)
 
-            indicator = ctk.CTkFrame(row, width=4, fg_color=color, corner_radius=2)
-            indicator.grid(row=0, column=0, rowspan=2, sticky="ns", padx=(0, 12))
+            indicator = ctk.CTkFrame(row, width=3, fg_color=color, corner_radius=2)
+            indicator.grid(row=0, column=0, rowspan=2, sticky="ns", padx=(0, 10))
             indicator.grid_propagate(False)
 
             ctk.CTkLabel(row, text=f"{icon} {label}",
-                font=ctk.CTkFont(size=11, weight="bold"), text_color=color,
-            ).grid(row=0, column=1, pady=(6, 1), sticky="w")
+                font=ctk.CTkFont(size=10, weight="bold"), text_color=color,
+            ).grid(row=0, column=1, pady=(5, 0), sticky="w")
 
             ctk.CTkLabel(row, text=str(_attr(finding, "message")),
                 font=ctk.CTkFont(size=12), text_color=C["text_primary"],
-                anchor="w", wraplength=600,
-            ).grid(row=1, column=1, pady=(0, 6), sticky="w")
+                anchor="w", wraplength=580,
+            ).grid(row=1, column=1, pady=(0, 5), sticky="w")
 
             file_info = str(_attr(finding, "file"))
             line_info = _attr(finding, "line", 0)
             if file_info:
-                location = f"📄 {file_info}" + (f"  :  línea {line_info}" if line_info else "")
+                location = f"📄 {file_info}" + (f" : línea {line_info}" if line_info else "")
                 ctk.CTkLabel(row, text=location,
-                    font=ctk.CTkFont(size=11), text_color=C["text_muted"],
-                ).grid(row=0, column=2, rowspan=2, padx=12, pady=6, sticky="e")
+                    font=ctk.CTkFont(size=10), text_color=C["text_muted"],
+                ).grid(row=0, column=2, rowspan=2, padx=10, pady=5, sticky="e")
 
     def _on_findings_update(self, event, data):
         if event in ("analysis_done", "reset"):

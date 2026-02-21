@@ -130,6 +130,6 @@ class CodeHunterApp(ctk.CTk):
 
         name = os.path.basename(path)
         self.project_title_label.configure(
-            text=f"📂  {name}",
+            text=f" {name}",
             text_color=COLORS["text_primary"],
         )
