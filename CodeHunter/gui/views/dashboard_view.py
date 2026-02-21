@@ -7,7 +7,6 @@ import math
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from gui.utils import get_level as _level, get_attr as _attr
-from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
 
 
 class DashboardView(ctk.CTkFrame):
@@ -32,8 +31,7 @@ class DashboardView(ctk.CTkFrame):
         title_row.pack(side="left")
 
         ctk.CTkLabel(title_row, text="Dashboard",
-            font=ctk.CTkFont(size=24, weight="bold"),
-            text_color=C["text_primary"],
+            font=ctk.CTkFont(size=24, weight="bold"), text_color=C["text_primary"],
         ).pack(side="left")
 
         self.status_badge = ctk.CTkLabel(title_row, text="  SIN ANALIZAR  ",
@@ -42,7 +40,6 @@ class DashboardView(ctk.CTkFrame):
         )
         self.status_badge.pack(side="left", padx=16)
 
-        # Botón exportar PDF en el header
         self.export_btn = ctk.CTkButton(header,
             text="📄  Exportar PDF",
             font=ctk.CTkFont(size=12, weight="bold"), height=36,
@@ -166,24 +163,24 @@ class DashboardView(ctk.CTkFrame):
         if not finds:
             ctk.CTkLabel(self.recent_frame,
                 text="✅  No se detectaron problemas en el proyecto.",
-                font=ctk.CTkFont(size=36), text_color=C["accent_green"],
+                font=ctk.CTkFont(size=13), text_color=C["accent_green"],
             ).pack(pady=40)
             return
 
         for finding in finds[:10]:
             row = ctk.CTkFrame(self.recent_frame, fg_color=C["bg_card"], corner_radius=8)
-            row.pack(fill="x", pady=4)
+            row.pack(fill="x", pady=3)
             level = _level(finding)
             color = level_colors.get(level, C["text_muted"])
 
             ctk.CTkLabel(row, text=f"  {level.upper():8}",
                 font=ctk.CTkFont(size=11, weight="bold"), text_color=color,
                 width=90, anchor="w",
-            ).pack(side="left", padx=(12, 0), pady=10)
+            ).pack(side="left", padx=(12, 0), pady=8)
 
             ctk.CTkLabel(row, text=str(_attr(finding, "message")),
                 font=ctk.CTkFont(size=12), text_color=C["text_primary"], anchor="w",
-            ).pack(side="left", padx=8, pady=10)
+            ).pack(side="left", padx=8, pady=8)
 
             file_info = str(_attr(finding, "file"))
             line_info = _attr(finding, "line", 0)
@@ -191,7 +188,7 @@ class DashboardView(ctk.CTkFrame):
                 ctk.CTkLabel(row,
                     text=f"{file_info}:{line_info}" if line_info else file_info,
                     font=ctk.CTkFont(size=11), text_color=C["text_muted"],
-                ).pack(side="right", padx=16, pady=10)
+                ).pack(side="right", padx=12, pady=8)
 
     def _export_pdf(self):
         if not self.state.findings and self.state.health_score == 0.0:
@@ -206,11 +203,11 @@ class DashboardView(ctk.CTkFrame):
         if not save_path:
             return
         try:
+            from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
             finds    = self.state.findings
             score    = self.state.health_score
             critical = sum(1 for f in finds if _level(f) == "critical")
             warnings = sum(1 for f in finds if _level(f) == "warning")
-
             profile_description = (
                 f"Proyecto: {self.state.project_path}\n"
                 f"Total hallazgos: {len(finds)}"
