@@ -69,7 +69,6 @@ class CodeHunterApp(ctk.CTk):
 
         self.project_title_label = ctk.CTkLabel(
             self.title_bar,
-            text="Ningún proyecto seleccionado",
             font=ctk.CTkFont(size=36, weight="bold"),
             text_color=COLORS["text_muted"],
             anchor="center",
@@ -133,6 +132,6 @@ class CodeHunterApp(ctk.CTk):
 
         name = os.path.basename(path)
         self.project_title_label.configure(
-            text=f"📂  {name}",
+            text=f" {name}",
             text_color=COLORS["text_primary"],
         )
