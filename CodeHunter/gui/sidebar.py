@@ -84,6 +84,15 @@ class Sidebar(ctk.CTkFrame):
         )
         self.path_label.grid(row=0, column=0, padx=10, pady=6, sticky="w")
 
+        self.project_name_label = ctk.CTkLabel(
+            folder_frame,
+            text="",
+            font=ctk.CTkFont(size=36, weight="bold"),
+            text_color=C["text_primary"],
+            anchor="center",
+        )
+        self.project_name_label.grid(row=2, column=0, padx=10, pady=(0, 8), sticky="ew")
+
         ctk.CTkButton(
             folder_frame,
             text="📁  Abrir carpeta",
