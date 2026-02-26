@@ -1,20 +1,112 @@
 """
 CodeHunter GUI - Vista Dashboard
-Gauge circular de salud + contadores + exportar PDF.
+Gauge circular de salud + contadores + descripción del proyecto + exportar PDF.
 """
 
+import os
 import math
+import threading
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from gui.utils import get_level as _level, get_attr as _attr
 from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
 
 
+def _scan_project(path):
+    """Lee el proyecto y retorna estadísticas + muestra de código."""
+    stats = {"files": 0, "lines": 0, "functions": 0, "classes": 0, "modules": set()}
+    code_sample = []
+
+    IGNORE = {"__pycache__", ".venv", "venv", ".git", "node_modules"}
+
+    for dirpath, dirs, files in os.walk(path):
+        dirs[:] = [d for d in dirs if d not in IGNORE]
+        for fname in files:
+            if not fname.endswith(".py"):
+                continue
+            stats["files"] += 1
+            # Módulo = subcarpeta directa
+            rel = os.path.relpath(dirpath, path)
+            top = rel.split(os.sep)[0]
+            if top != ".":
+                stats["modules"].add(top)
+
+            fpath = os.path.join(dirpath, fname)
+            try:
+                with open(fpath, encoding="utf-8", errors="ignore") as f:
+                    lines = f.readlines()
+                stats["lines"] += len(lines)
+                for line in lines:
+                    s = line.strip()
+                    if s.startswith("def "):
+                        stats["functions"] += 1
+                    if s.startswith("class "):
+                        stats["classes"] += 1
+                # Tomar muestra de los primeros archivos para el readme
+                if len(code_sample) < 3 and len(lines) > 5:
+                    code_sample.append({
+                        "file": os.path.relpath(fpath, path),
+                        "code": "".join(lines[:40])
+                    })
+            except Exception:
+                pass
+
+    stats["modules"] = len(stats["modules"])
+    return stats, code_sample
+
+
+def _generate_readme(project_name, stats, code_sample):
+    """Llama a la API de Claude para generar descripción del proyecto."""
+    import json
+    try:
+        import urllib.request
+        sample_text = ""
+        for s in code_sample:
+            sample_text += f"\n--- {s['file']} ---\n{s['code'][:500]}\n"
+
+        prompt = f"""Analiza este proyecto Python llamado "{project_name}" y escribe una descripción técnica breve en español.
+
+Estadísticas:
+- Archivos Python: {stats['files']}
+- Líneas de código: {stats['lines']}
+- Funciones: {stats['functions']}
+- Clases: {stats['classes']}
+- Módulos: {stats['modules']}
+
+Muestra de código:
+{sample_text}
+
+Escribe en español:
+1. Una descripción de 2-3 oraciones de qué hace el proyecto
+2. Las tecnologías o patrones principales que detectas
+3. El propósito principal del sistema
+
+Sé conciso y técnico. Máximo 150 palabras."""
+
+        payload = json.dumps({
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 1000,
+            "messages": [{"role": "user", "content": prompt}]
+        }).encode()
+
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read())
+            return data["content"][0]["text"]
+    except Exception:
+        return None
+
+
 class DashboardView(ctk.CTkFrame):
     def __init__(self, parent, state, colors):
         super().__init__(parent, fg_color=colors["bg_dark"], corner_radius=0)
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=1)  # ← solo fila 0, el scroll ocupa todo
+        self.grid_rowconfigure(0, weight=1)
         self.state  = state
         self.colors = colors
         self._build_dashboard()
@@ -27,7 +119,7 @@ class DashboardView(ctk.CTkFrame):
         scroll = ctk.CTkScrollableFrame(self, fg_color=C["bg_dark"], corner_radius=0)
         scroll.grid(row=0, column=0, sticky="nsew")
         scroll.grid_columnconfigure(0, weight=1)
-        self._scroll = scroll  # guardamos referencia para usarla en _refresh/_clear
+        self._scroll = scroll
 
         # ── Header ────────────────────────────────────────────────────────────
         header = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -86,20 +178,71 @@ class DashboardView(ctk.CTkFrame):
         self.counter_warning  = self._counter_card(counters_col, "WARNINGS", "0", C["accent_yellow"], row=1)
         self.counter_info     = self._counter_card(counters_col, "INFO",     "0", C["accent"],        row=2)
 
-        # ── Hallazgos recientes ───────────────────────────────────────────────
-        ctk.CTkLabel(scroll, text="Hallazgos recientes",
+        # ── Descripción del proyecto (README automático) ──────────────────────
+        ctk.CTkLabel(scroll, text="📋  Descripción del Proyecto",
             font=ctk.CTkFont(size=14, weight="bold"), text_color=C["text_primary"],
         ).grid(row=2, column=0, padx=30, pady=(0, 8), sticky="w")
 
-        # Frame normal (no scrolleable) para los hallazgos — el scroll ya es el padre
+        self.readme_frame = ctk.CTkFrame(scroll, fg_color=C["bg_card"], corner_radius=12)
+        self.readme_frame.grid(row=3, column=0, padx=30, pady=(0, 20), sticky="ew")
+        self.readme_frame.grid_columnconfigure(0, weight=1)
+
+        # Estadísticas del proyecto (fila de chips)
+        self.stats_row = ctk.CTkFrame(self.readme_frame, fg_color="transparent")
+        self.stats_row.grid(row=0, column=0, padx=20, pady=(16, 8), sticky="ew")
+
+        self.stat_files   = self._stat_chip(self.stats_row, "📁", "—", "Archivos")
+        self.stat_lines   = self._stat_chip(self.stats_row, "📝", "—", "Líneas")
+        self.stat_funcs   = self._stat_chip(self.stats_row, "⚙", "—", "Funciones")
+        self.stat_classes = self._stat_chip(self.stats_row, "🧩", "—", "Clases")
+        self.stat_modules = self._stat_chip(self.stats_row, "📦", "—", "Módulos")
+
+        # Separador
+        ctk.CTkFrame(self.readme_frame, height=1, fg_color=C["border"]
+        ).grid(row=1, column=0, padx=20, pady=4, sticky="ew")
+
+        # Texto de descripción generado por IA
+        self.readme_label = ctk.CTkLabel(self.readme_frame,
+            text="Ejecuta el diagnóstico para generar la descripción del proyecto.",
+            font=ctk.CTkFont(size=13), text_color=C["text_muted"],
+            anchor="w", justify="left", wraplength=800,
+        )
+        self.readme_label.grid(row=2, column=0, padx=20, pady=(8, 16), sticky="ew")
+
+        # ── Hallazgos recientes ───────────────────────────────────────────────
+        ctk.CTkLabel(scroll, text="Hallazgos recientes",
+            font=ctk.CTkFont(size=14, weight="bold"), text_color=C["text_primary"],
+        ).grid(row=4, column=0, padx=30, pady=(0, 8), sticky="w")
+
         self.recent_frame = ctk.CTkFrame(scroll, fg_color=C["bg_dark"], corner_radius=0)
-        self.recent_frame.grid(row=3, column=0, padx=30, pady=(0, 24), sticky="ew")
+        self.recent_frame.grid(row=5, column=0, padx=30, pady=(0, 24), sticky="ew")
         self.recent_frame.grid_columnconfigure(0, weight=1)
 
         self._no_data_label = ctk.CTkLabel(self.recent_frame,
             text="Abre una carpeta y ejecuta el diagnóstico para ver resultados.",
             font=ctk.CTkFont(size=13), text_color=C["text_muted"])
         self._no_data_label.pack(pady=40)
+
+    def _stat_chip(self, parent, icon, value, label):
+        """Crea un chip de estadística: ícono + número + etiqueta."""
+        C = self.colors
+        chip = ctk.CTkFrame(parent, fg_color=C["bg_hover"], corner_radius=8)
+        chip.pack(side="left", padx=6)
+
+        ctk.CTkLabel(chip, text=icon,
+            font=ctk.CTkFont(size=16), text_color=C["accent"],
+        ).pack(side="left", padx=(10, 4), pady=10)
+
+        val_lbl = ctk.CTkLabel(chip, text=value,
+            font=ctk.CTkFont(size=16, weight="bold"), text_color=C["text_primary"],
+        )
+        val_lbl.pack(side="left", pady=10)
+
+        ctk.CTkLabel(chip, text=f"  {label}",
+            font=ctk.CTkFont(size=11), text_color=C["text_muted"],
+        ).pack(side="left", padx=(2, 12), pady=10)
+
+        return val_lbl  # retorna el label del valor para actualizarlo después
 
     def _counter_card(self, parent, label, value, color, row):
         c = ctk.CTkFrame(parent, fg_color=self.colors["bg_card"], corner_radius=12)
@@ -145,11 +288,14 @@ class DashboardView(ctk.CTkFrame):
     def _show_loading(self):
         self.status_badge.configure(text="  ANALIZANDO...  ",
             fg_color=self.colors["accent"], text_color="#FFFFFF")
+        self.readme_label.configure(text="⏳  Generando descripción del proyecto...",
+            text_color=self.colors["text_muted"])
 
     def _refresh(self):
         C     = self.colors
         score = self.state.health_score
         finds = self.state.findings
+        path  = self.state.project_path
 
         self._draw_gauge(score)
         self.score_label.configure(text=f"{score:.0f}")
@@ -164,6 +310,11 @@ class DashboardView(ctk.CTkFrame):
         self.counter_warning.configure(text=str(count("warning")))
         self.counter_info.configure(text=str(count("info")))
 
+        # ── Escanear proyecto y generar README en hilo separado ───────────────
+        if path:
+            threading.Thread(target=self._generate_project_info, args=(path,), daemon=True).start()
+
+        # ── Hallazgos recientes ───────────────────────────────────────────────
         for w in self.recent_frame.winfo_children():
             w.destroy()
 
@@ -198,6 +349,48 @@ class DashboardView(ctk.CTkFrame):
                     text=f"{file_info}:{line_info}" if line_info else file_info,
                     font=ctk.CTkFont(size=11), text_color=C["text_muted"],
                 ).pack(side="right", padx=12, pady=8)
+
+    def _generate_project_info(self, path):
+        """Corre en hilo: escanea stats y llama a IA para descripción."""
+        project_name = os.path.basename(path)
+        stats, code_sample = _scan_project(path)
+
+        # Actualizar chips de estadísticas en hilo principal
+        self.after(0, lambda: self._update_stats(stats))
+
+        # Generar descripción con IA
+        self.after(0, lambda: self.readme_label.configure(
+            text="🤖  Analizando código con IA...",
+            text_color=self.colors["text_muted"]
+        ))
+
+        description = _generate_readme(project_name, stats, code_sample)
+
+        if description:
+            self.after(0, lambda: self.readme_label.configure(
+                text=description,
+                text_color=self.colors["text_primary"]
+            ))
+        else:
+            # Si la IA no está disponible, mostrar descripción básica
+            basic = (
+                f"Proyecto Python con {stats['files']} archivos, "
+                f"{stats['lines']:,} líneas de código, "
+                f"{stats['functions']} funciones y {stats['classes']} clases "
+                f"distribuidas en {stats['modules']} módulos."
+            )
+            self.after(0, lambda: self.readme_label.configure(
+                text=basic,
+                text_color=self.colors["text_primary"]
+            ))
+
+    def _update_stats(self, stats):
+        """Actualiza los chips de estadísticas."""
+        self.stat_files.configure(text=str(stats["files"]))
+        self.stat_lines.configure(text=f"{stats['lines']:,}")
+        self.stat_funcs.configure(text=str(stats["functions"]))
+        self.stat_classes.configure(text=str(stats["classes"]))
+        self.stat_modules.configure(text=str(stats["modules"]))
 
     def _export_pdf(self):
         if not self.state.findings and self.state.health_score == 0.0:
@@ -243,6 +436,14 @@ class DashboardView(ctk.CTkFrame):
         self.counter_critical.configure(text="0")
         self.counter_warning.configure(text="0")
         self.counter_info.configure(text="0")
+        self.stat_files.configure(text="—")
+        self.stat_lines.configure(text="—")
+        self.stat_funcs.configure(text="—")
+        self.stat_classes.configure(text="—")
+        self.stat_modules.configure(text="—")
+        self.readme_label.configure(
+            text="Ejecuta el diagnóstico para generar la descripción del proyecto.",
+            text_color=self.colors["text_muted"])
         for w in self.recent_frame.winfo_children():
             w.destroy()
         self._no_data_label = ctk.CTkLabel(self.recent_frame,
