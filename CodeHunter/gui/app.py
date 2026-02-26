@@ -71,7 +71,7 @@ class CodeHunterApp(ctk.CTk):
             self.title_bar,
             text="",
             font=ctk.CTkFont(size=36, weight="bold"),
-            text_color=COLORS["text_muted"],
+            text_color=COLORS["accent"],
             anchor="center",
         )
         self.project_title_label.grid(row=0, column=0, sticky="nsew", padx=20)
@@ -128,7 +128,7 @@ class CodeHunterApp(ctk.CTk):
         name = os.path.basename(path)
         self.project_title_label.configure(
             text=f"📂  {name}",
-            text_color=COLORS["text_primary"],
+            text_color=COLORS["accent"],
         )
 
         name = os.path.basename(path)
