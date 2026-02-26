@@ -266,16 +266,54 @@ class DashboardView(ctk.CTkFrame):
         canvas = self.gauge_canvas
         canvas.delete("all")
         C = self.colors
-        cx, cy, r, thickness = 100, 100, 75, 14
+
+        # Limitar score entre 0 y 100
+        score = max(0, min(score, 100))
+
+        cx, cy = 100, 100
+        r = 75
+        thickness = 14
+
+        # Arco base (fondo gris)
         self._arc(canvas, cx, cy, r, thickness, 135, 270, C["bg_hover"])
-        color = C["accent_green"] if score >= 80 else C["accent_yellow"] if score >= 50 else C["accent_red"]
+
+        # Color dinámico
+        if score >= 80:
+            color = C["accent_green"]
+        elif score >= 50:
+            color = C["accent_yellow"]
+        else:
+            color = C["accent_red"]
+
+        # Convertir score a grados reales del gauge
         extent = (score / 100) * 270
+
+        # Dibujar arco de progreso
         if extent > 0:
             self._arc(canvas, cx, cy, r, thickness, 135, extent, color)
-            angle_rad = math.radians(135 + extent)
-            px = cx + r * math.cos(angle_rad)
-            py = cy + r * math.sin(angle_rad)
-            canvas.create_oval(px-6, py-6, px+6, py+6, fill=color, outline="")
+
+        # ─── AGUJA TIPO VELOCÍMETRO ───
+        final_angle = 135 + extent
+        angle_rad = math.radians(final_angle)
+
+        needle_length = r - 10
+
+        px = cx + needle_length * math.cos(angle_rad)
+        py = cy + needle_length * math.sin(angle_rad)
+
+        canvas.create_line(
+            cx, cy, px, py,
+            fill=color,
+            width=4
+        )
+
+        # Centro decorativo
+        canvas.create_oval(
+            cx-8, cy-8,
+            cx+8, cy+8,
+            fill=C["text_primary"],
+            outline=""
+        )
 
     def _arc(self, canvas, cx, cy, r, thickness, start, extent, color):
         canvas.create_arc(cx-r, cy-r, cx+r, cy+r,
