@@ -7,6 +7,7 @@ import math
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from gui.utils import get_level as _level, get_attr as _attr
+from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
 
 
 class DashboardView(ctk.CTkFrame):
@@ -211,7 +212,6 @@ class DashboardView(ctk.CTkFrame):
         if not save_path:
             return
         try:
-            from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
             finds    = self.state.findings
             score    = self.state.health_score
             critical = sum(1 for f in finds if _level(f) == "critical")

@@ -2,7 +2,6 @@
 CodeHunter GUI - Sidebar
 """
 
-import os
 import threading
 import customtkinter as ctk
 from tkinter import filedialog
