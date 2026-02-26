@@ -1,5 +1,6 @@
 """
 CodeHunter GUI - Vista Árbol del Proyecto
+Muestra la estructura con líneas tipo ├── └──
 """
 
 import os
@@ -28,7 +29,7 @@ class TreeView(ctk.CTkFrame):
 
         ctk.CTkLabel(self.tree_frame,
             text="Selecciona una carpeta de proyecto para ver su estructura.",
-            font=ctk.CTkFont(size=13), text_color=C["text_muted"],
+            font=ctk.CTkFont(family="Courier New", size=13), text_color=C["text_muted"],
         ).pack(pady=40)
 
     def _render_tree(self):
@@ -39,50 +40,80 @@ class TreeView(ctk.CTkFrame):
         if not path or not os.path.isdir(path):
             ctk.CTkLabel(self.tree_frame,
                 text="Selecciona una carpeta de proyecto.",
-                font=ctk.CTkFont(size=13), text_color=self.colors["text_muted"],
+                font=ctk.CTkFont(family="Courier New", size=13),
+                text_color=self.colors["text_muted"],
             ).pack(pady=40)
             return
 
-        self._render_dir(self.tree_frame, path, depth=0)
+        # Nombre raíz del proyecto
+        C = self.colors
+        root_name = os.path.basename(path)
+        ctk.CTkLabel(self.tree_frame,
+            text=f"📁 {root_name}/",
+            font=ctk.CTkFont(family="Courier New", size=13, weight="bold"),
+            text_color=C["accent"], anchor="w",
+        ).pack(fill="x", padx=12, pady=(8, 2))
 
-    def _render_dir(self, parent, dir_path, depth):
+        self._render_dir(path, prefix="")
+
+    def _render_dir(self, dir_path, prefix):
         C = self.colors
         IGNORE = {".git", "__pycache__", ".venv", "venv", "node_modules", ".idea", ".vscode"}
 
         try:
             entries = sorted(os.scandir(dir_path), key=lambda e: (not e.is_dir(), e.name))
+            entries = [e for e in entries if e.name not in IGNORE and not e.name.startswith(".")]
         except PermissionError:
             return
 
-        for entry in entries:
-            if entry.name in IGNORE or entry.name.startswith("."):
-                continue
+        for i, entry in enumerate(entries):
+            is_last = (i == len(entries) - 1)
+            is_dir  = entry.is_dir()
 
-            is_dir = entry.is_dir()
-            icon   = "📁" if is_dir else self._file_icon(entry.name)
-            color  = C["accent"] if is_dir else C["text_primary"]
-            weight = "bold" if is_dir else "normal"
+            # Conector ├── o └──
+            connector = "└── " if is_last else "├── "
+            icon      = self._file_icon(entry.name, is_dir)
 
-            row = ctk.CTkFrame(parent, fg_color="transparent", height=28)
-            row.pack(fill="x", pady=1)
-            row.pack_propagate(False)
+            # Color según tipo
+            if is_dir:
+                color  = C["accent"]
+                weight = "bold"
+                name   = entry.name + "/"
+            else:
+                color  = C["text_primary"]
+                weight = "normal"
+                name   = entry.name
 
-            ctk.CTkLabel(row,
-                text=f"{'  ' * depth}{icon}  {entry.name}",
-                font=ctk.CTkFont(size=12, weight=weight),
+            line = f"{prefix}{connector}{icon} {name}"
+
+            ctk.CTkLabel(self.tree_frame,
+                text=line,
+                font=ctk.CTkFont(family="Courier New", size=12, weight=weight),
                 text_color=color, anchor="w",
-            ).pack(side="left", padx=(8 + depth * 18, 0))
+            ).pack(fill="x", padx=12, pady=0)
 
-            if is_dir and depth < 3:
-                self._render_dir(parent, entry.path, depth + 1)
+            # Recursión con el prefijo correcto
+            if is_dir and prefix.count("│") + prefix.count(" ") // 4 < 4:
+                extension = "    " if is_last else "│   "
+                self._render_dir(entry.path, prefix + extension)
 
-    def _file_icon(self, name: str) -> str:
+    def _file_icon(self, name: str, is_dir: bool) -> str:
+        if is_dir:
+            return "📁"
         ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
         return {
-            "py": "🐍", "txt": "📄", "md": "📝",
-            "json": "🔧", "yaml": "🔧", "yml": "🔧",
-            "toml": "🔧", "cfg": "⚙", "ini": "⚙",
-            "pdf": "📕", "png": "🖼", "jpg": "🖼",
+            "py":   "🐍",
+            "txt":  "📄",
+            "md":   "📝",
+            "json": "🔧",
+            "yaml": "🔧",
+            "yml":  "🔧",
+            "toml": "🔧",
+            "cfg":  "⚙",
+            "ini":  "⚙",
+            "pdf":  "📕",
+            "png":  "🖼",
+            "jpg":  "🖼",
         }.get(ext, "📄")
 
     def _on_tree_update(self, event, data):
