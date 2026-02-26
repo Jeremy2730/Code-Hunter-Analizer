@@ -82,10 +82,10 @@ class Sidebar(ctk.CTkFrame):
         )
 
         nav_items = [
-            ("dashboard", "◈  Dashboard"),
-            ("findings",  "⚠  Hallazgos"),
             ("tree",      "🌲  Árbol"),
             ("search",    "🔍  Buscar"),
+            ("findings",  "⚠  Hallazgos"),
+            ("dashboard", "◈  Dashboard"),
         ]
 
         nav_frame = ctk.CTkFrame(self, fg_color="transparent")
