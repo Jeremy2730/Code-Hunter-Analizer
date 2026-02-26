@@ -4,7 +4,9 @@ Gauge circular de salud + contadores + descripción del proyecto + exportar PDF.
 """
 
 import os
+import json
 import math
+import urllib.request
 import threading
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
@@ -57,9 +59,8 @@ def _scan_project(path):
 
 def _generate_readme(project_name, stats, code_sample):
     """Llama a la API de Claude para generar descripción del proyecto."""
-    import json
+
     try:
-        import urllib.request
         sample_text = ""
         for s in code_sample:
             sample_text += f"\n--- {s['file']} ---\n{s['code'][:500]}\n"
