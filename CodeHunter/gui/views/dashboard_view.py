@@ -13,7 +13,7 @@ class DashboardView(ctk.CTkFrame):
     def __init__(self, parent, state, colors):
         super().__init__(parent, fg_color=colors["bg_dark"], corner_radius=0)
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(0, weight=1)  # ← solo fila 0, el scroll ocupa todo
         self.state  = state
         self.colors = colors
         self._build_dashboard()
@@ -22,8 +22,14 @@ class DashboardView(ctk.CTkFrame):
     def _build_dashboard(self):
         C = self.colors
 
+        # ── Frame scrolleable que envuelve TODA la vista ──────────────────────
+        scroll = ctk.CTkScrollableFrame(self, fg_color=C["bg_dark"], corner_radius=0)
+        scroll.grid(row=0, column=0, sticky="nsew")
+        scroll.grid_columnconfigure(0, weight=1)
+        self._scroll = scroll  # guardamos referencia para usarla en _refresh/_clear
+
         # ── Header ────────────────────────────────────────────────────────────
-        header = ctk.CTkFrame(self, fg_color="transparent")
+        header = ctk.CTkFrame(scroll, fg_color="transparent")
         header.grid(row=0, column=0, padx=30, pady=(28, 0), sticky="ew")
         header.grid_columnconfigure(0, weight=1)
 
@@ -51,7 +57,7 @@ class DashboardView(ctk.CTkFrame):
         self.export_btn.pack(side="right")
 
         # ── Gauge + contadores ────────────────────────────────────────────────
-        top_row = ctk.CTkFrame(self, fg_color="transparent")
+        top_row = ctk.CTkFrame(scroll, fg_color="transparent")
         top_row.grid(row=1, column=0, padx=30, pady=20, sticky="ew")
         top_row.grid_columnconfigure(1, weight=1)
 
@@ -80,12 +86,14 @@ class DashboardView(ctk.CTkFrame):
         self.counter_info     = self._counter_card(counters_col, "INFO",     "0", C["accent"],        row=2)
 
         # ── Hallazgos recientes ───────────────────────────────────────────────
-        ctk.CTkLabel(self, text="Hallazgos recientes",
+        ctk.CTkLabel(scroll, text="Hallazgos recientes",
             font=ctk.CTkFont(size=14, weight="bold"), text_color=C["text_primary"],
         ).grid(row=2, column=0, padx=30, pady=(0, 8), sticky="w")
 
-        self.recent_frame = ctk.CTkScrollableFrame(self, fg_color=C["bg_dark"], corner_radius=0)
-        self.recent_frame.grid(row=3, column=0, padx=30, pady=(0, 24), sticky="nsew")
+        # Frame normal (no scrolleable) para los hallazgos — el scroll ya es el padre
+        self.recent_frame = ctk.CTkFrame(scroll, fg_color=C["bg_dark"], corner_radius=0)
+        self.recent_frame.grid(row=3, column=0, padx=30, pady=(0, 24), sticky="ew")
+        self.recent_frame.grid_columnconfigure(0, weight=1)
 
         self._no_data_label = ctk.CTkLabel(self.recent_frame,
             text="Abre una carpeta y ejecuta el diagnóstico para ver resultados.",
