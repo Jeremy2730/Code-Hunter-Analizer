@@ -69,7 +69,7 @@ class CodeHunterApp(ctk.CTk):
 
         self.project_title_label = ctk.CTkLabel(
             self.title_bar,
-            text="Ningún proyecto seleccionado",
+            text="",
             font=ctk.CTkFont(size=36, weight="bold"),
             text_color=COLORS["text_muted"],
             anchor="center",
@@ -122,11 +122,14 @@ class CodeHunterApp(ctk.CTk):
     def _update_title_bar(self):
         path = self.app_state.project_path
         if not path:
-            self.project_title_label.configure(
-                text="Ningún proyecto seleccionado",
-                text_color=COLORS["text_muted"],
-            )
+            self.project_title_label.configure(text="")
             return
+
+        name = os.path.basename(path)
+        self.project_title_label.configure(
+            text=f"📂  {name}",
+            text_color=COLORS["text_primary"],
+        )
 
         name = os.path.basename(path)
         self.project_title_label.configure(
