@@ -9,6 +9,7 @@ import math
 import urllib.request
 import threading
 import customtkinter as ctk
+import time
 from tkinter import filedialog, messagebox
 from gui.utils import get_level as _level, get_attr as _attr
 from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
@@ -267,36 +268,28 @@ class DashboardView(ctk.CTkFrame):
         canvas.delete("all")
         C = self.colors
 
-        # Limitar score entre 0 y 100
         score = max(0, min(score, 100))
 
         cx, cy = 100, 100
         r = 75
-        thickness = 14
+        thickness = 16
 
-        # Arco base (fondo gris)
+        # Arco base
         self._arc(canvas, cx, cy, r, thickness, 135, 270, C["bg_hover"])
 
-        # Color dinámico
-        if score >= 80:
-            color = C["accent_green"]
-        elif score >= 50:
-            color = C["accent_yellow"]
-        else:
-            color = C["accent_red"]
-
-        # Convertir score a grados reales del gauge
         extent = (score / 100) * 270
 
-        # Dibujar arco de progreso
+        # Color dinámico gradiente
+        color = self._interpolate_color(score / 100)
+
         if extent > 0:
             self._arc(canvas, cx, cy, r, thickness, 135, extent, color)
 
-        # ─── AGUJA TIPO VELOCÍMETRO ───
+        # Aguja
         final_angle = 135 + extent
         angle_rad = math.radians(final_angle)
 
-        needle_length = r - 10
+        needle_length = r - 12
 
         px = cx + needle_length * math.cos(angle_rad)
         py = cy + needle_length * math.sin(angle_rad)
@@ -307,13 +300,37 @@ class DashboardView(ctk.CTkFrame):
             width=4
         )
 
-        # Centro decorativo
+        # Centro elegante
         canvas.create_oval(
-            cx-8, cy-8,
-            cx+8, cy+8,
-            fill=C["text_primary"],
+            cx-10, cy-10,
+            cx+10, cy+10,
+            fill="#1a1a1a",
             outline=""
         )
+
+    def animate_gauge(self, target_score, duration=800):
+        self._gauge_target = max(0, min(target_score, 100))
+        self._gauge_start = getattr(self, "_current_score", 0)
+        self._gauge_start_time = time.time()
+        self._gauge_duration = duration / 1000  # ms → seconds
+        self._animate_step()
+
+    def _animate_step(self):
+        now = time.time()
+        elapsed = now - self._gauge_start_time
+        t = min(elapsed / self._gauge_duration, 1)
+
+        eased = 1 - (1 - t) ** 3
+
+        current_score = self._gauge_start + (
+            (self._gauge_target - self._gauge_start) * eased
+        )
+
+        self._current_score = current_score
+        self._draw_gauge(current_score)
+
+        if t < 1:
+            self.after(16, self._animate_step)
 
     def _arc(self, canvas, cx, cy, r, thickness, start, extent, color):
         canvas.create_arc(cx-r, cy-r, cx+r, cy+r,
@@ -336,7 +353,7 @@ class DashboardView(ctk.CTkFrame):
         finds = self.state.findings
         path  = self.state.project_path
 
-        self._draw_gauge(score)
+        self.animate_gauge(score)
         self.score_label.configure(text=f"{score:.0f}")
 
         if score >= 80:   badge_color, badge_text = C["accent_green"],  "  HEALTHY  "
@@ -489,3 +506,27 @@ class DashboardView(ctk.CTkFrame):
             text="Abre una carpeta y ejecuta el diagnóstico para ver resultados.",
             font=ctk.CTkFont(size=13), text_color=self.colors["text_muted"])
         self._no_data_label.pack(pady=40)
+
+
+    def _interpolate_color(self, t):
+        """
+        t va de 0 a 1
+        0 = rojo
+        0.5 = amarillo
+        1 = verde
+        """
+
+        if t < 0.5:
+            # rojo -> amarillo
+            ratio = t / 0.5
+            r = 255
+            g = int(255 * ratio)
+            b = 0
+        else:
+            # amarillo -> verde
+            ratio = (t - 0.5) / 0.5
+            r = int(255 * (1 - ratio))
+            g = 255
+            b = 0
+
+        return f"#{r:02x}{g:02x}{b:02x}"
