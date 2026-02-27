@@ -328,6 +328,7 @@ class DashboardView(ctk.CTkFrame):
 
         self._current_score = current_score
         self._draw_gauge(current_score)
+        self.score_label.configure(text=f"{current_score:.0f}")
 
         if t < 1:
             self.after(16, self._animate_step)
@@ -353,9 +354,8 @@ class DashboardView(ctk.CTkFrame):
         finds = self.state.findings
         path  = self.state.project_path
 
-        self.animate_gauge(score)
-        self.score_label.configure(text=f"{score:.0f}")
-
+        self.after(50, lambda: self.animate_gauge(score))
+        
         if score >= 80:   badge_color, badge_text = C["accent_green"],  "  HEALTHY  "
         elif score >= 50: badge_color, badge_text = C["accent_yellow"], "  WARNING  "
         else:             badge_color, badge_text = C["accent_red"],    "  CRITICAL  "
