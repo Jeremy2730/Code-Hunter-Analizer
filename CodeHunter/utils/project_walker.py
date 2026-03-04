@@ -1,56 +1,61 @@
 """
 CodeHunter - Project Walker
-Utilidad centralizada para recorrer archivos Python del proyecto,
-excluyendo entornos virtuales, cachés y carpetas de build.
+Fuente única de verdad para recorrer el proyecto.
+Todos los analizadores deben usar walk_project() o walk_python_files().
 """
 
 import os
 from pathlib import Path
 
-# Nombre exportado como IGNORE_DIRS (usado por file_analyzer, project_scanner, etc.)
 IGNORE_DIRS = {
-    # Entornos virtuales (todas las variantes comunes)
-    "venv", ".venv", "env", ".env",
-    "virtualenv", ".virtualenv",
+    # Entornos virtuales
+    "venv", ".venv", "env", ".env", "virtualenv", ".virtualenv",
     # Control de versiones
     ".git", ".hg", ".svn",
     # Caché Python
-    "__pycache__", ".mypy_cache", ".ruff_cache",
-    ".pytest_cache", ".hypothesis",
+    "__pycache__", ".mypy_cache", ".ruff_cache", ".pytest_cache", ".hypothesis",
     # Build / distribución
     "build", "dist", ".eggs", "site-packages",
     # Otros
-    "node_modules", ".tox",
-    "cache", "memory", "recall",
+    "node_modules", ".tox", "cache", "memory", "recall",
 }
 
-# Alias para compatibilidad con código que use el nombre anterior
+# Alias de compatibilidad
 IGNORED_DIRS = IGNORE_DIRS
 
 
-def walk_project(project_path):
+def _should_ignore(path: str) -> bool:
     """
-    Generador que recorre el proyecto haciendo yield de (root, files),
-    sin entrar en entornos virtuales, cachés ni carpetas de build.
+    Retorna True si CUALQUIER parte de la ruta es una carpeta ignorada.
+    Funciona correctamente en Windows y Linux.
+    """
+    return any(part in IGNORE_DIRS or part.endswith(".egg-info")
+               for part in Path(path).parts)
+
+
+def walk_project(project_path: str):
+    """
+    Recorre el proyecto haciendo yield de (root, files).
+    Nunca entra en entornos virtuales, cachés ni carpetas de build.
     """
     for root, dirs, files in os.walk(project_path):
-
-        # Saltar si alguna parte de la ruta ya es una carpeta ignorada
-        if any(part in IGNORE_DIRS for part in Path(root).parts):
-            continue
-
-        # Filtrar subcarpetas para que os.walk no descienda en ellas
+        # Bloquear descenso en carpetas ignoradas (in-place)
         dirs[:] = [
             d for d in dirs
             if d not in IGNORE_DIRS and not d.endswith(".egg-info")
         ]
+
+        # Saltar si la ruta actual contiene un segmento ignorado
+        # (cubre casos donde os.walk ya entró antes del filtrado)
+        if _should_ignore(root):
+            continue
 
         yield root, files
 
 
 def walk_python_files(project_path: str):
     """
-    Generador que hace yield de la ruta absoluta de cada .py en el proyecto.
+    Hace yield de la ruta absoluta de cada .py en el proyecto.
     """
     for root, files in walk_project(project_path):
         for fname in files:

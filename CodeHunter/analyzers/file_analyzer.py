@@ -20,7 +20,6 @@ def detect_empty_python_files(project_path):
                 continue
 
             path = os.path.join(root, file)
-
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
@@ -51,18 +50,19 @@ def detect_empty_python_files(project_path):
 
 def detect_empty_folders(project_path):
     """
-    Detecta carpetas que están realmente vacías (sin archivos en todo su árbol),
-    excluyendo entornos virtuales y cachés.
+    Detecta carpetas completamente vacías (sin archivos ni subcarpetas),
+    respetando las exclusiones de project_walker.
     """
     findings = []
 
     for root, dirs, files in os.walk(project_path):
-        # Respetar la misma lista de exclusiones que walk_project
-        dirs[:] = [d for d in dirs if d not in IGNORE_DIRS and not d.endswith(".egg-info")]
+        # Aplicar las mismas exclusiones que walk_project
+        dirs[:] = [
+            d for d in dirs
+            if d not in IGNORE_DIRS and not d.endswith(".egg-info")
+        ]
 
-        # Una carpeta es "vacía útil" si no tiene archivos Y no tiene subcarpetas
-        # (después del filtrado). Si tiene subdirs, os.walk los visitará después
-        # y si todos están vacíos, también los reportará individualmente.
+        # Solo reportar si no hay archivos Y no quedan subcarpetas tras filtrar
         if not files and not dirs:
             findings.append(Finding(
                 level="WARNING",

@@ -1,21 +1,26 @@
-import os
+"""
+CodeHunter - File Scanner
+Genera el árbol de estructura del proyecto.
+"""
 
-IGNORE_DIRS = {
-    ".venv", "__pycache__", ".git", ".idea", ".vscode",
-    "node_modules", "site-packages", "cache", "memory", "recall"
-}
+import os
+from CodeHunter.utils.project_walker import IGNORE_DIRS
+
 
 def build_project_tree(root_path, prefix=""):
+    """Genera el árbol visual de archivos del proyecto."""
     lines = []
-    items = sorted(os.listdir(root_path))
+    try:
+        items = sorted(os.listdir(root_path))
+    except PermissionError:
+        return lines
 
-    for index, item in enumerate(items):
+    # Filtrar carpetas ignoradas de la lista visible
+    visible = [i for i in items if i not in IGNORE_DIRS]
+
+    for index, item in enumerate(visible):
         full_path = os.path.join(root_path, item)
-
-        if item in IGNORE_DIRS:
-            continue
-
-        is_last = index == len(items) - 1
+        is_last   = index == len(visible) - 1
         connector = "└── " if is_last else "├── "
 
         if os.path.isdir(full_path):
