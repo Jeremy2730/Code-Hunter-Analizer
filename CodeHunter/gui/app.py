@@ -5,12 +5,12 @@ Layout: Sidebar izquierdo + Barra de título + Área de contenido
 
 import os
 import customtkinter as ctk
-from gui.sidebar import Sidebar
-from gui.views.dashboard_view import DashboardView
-from gui.views.findings_view import FindingsView
-from gui.views.tree_view import TreeView
-from gui.views.search_view import SearchView
-from gui.state import AppState
+from .sidebar import Sidebar 
+from .views.dashboard_view import DashboardView
+from .views.findings_view import FindingsView
+from .views.tree_view import TreeView
+from .views.search_view import SearchView
+from .state import AppState
 
 
 ctk.set_appearance_mode("dark")

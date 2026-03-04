@@ -4,7 +4,7 @@ Lista filtrable de todos los problemas detectados.
 """
 
 import customtkinter as ctk
-from gui.utils import get_level as _level, get_attr as _attr
+from ..utils import get_level as _level, get_attr as _attr
 
 
 class FindingsView(ctk.CTkFrame):
