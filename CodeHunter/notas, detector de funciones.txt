@@ -34,9 +34,7 @@ pip install pandas
 
 python -m CodeHunter             /para ejecutar CodeHunter
 
-python -m CodeHunter.main
-
-python CodeHunter/main_gui.py          ejecutar la gui
+python -m CodeHunter.main_gui          ejecutar la gui
 
 
 C:\Users\ADMIN\Downloads\CodeHunter_Analizer -0.2
