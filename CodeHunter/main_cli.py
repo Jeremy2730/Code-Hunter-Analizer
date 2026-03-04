@@ -1,4 +1,4 @@
+from .ui.cli_controller import run_cli
+
 def main():
-    print("CodeHunter CLI iniciado")
-    # Aquí irá tu lógica de consola
-    
+    run_cli()
