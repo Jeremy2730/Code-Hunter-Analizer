@@ -15,7 +15,8 @@ pip install rich click pylint           --Instalar dependencias del proyecto
 pip freeze > requirements.txt           --crear requirements.txt
 pip install -r requirements.txt         --Guardar dependencias
 
-.\.venv\Scripts\Activate.ps1            --Activar el venv
+-3.13 -m venv venv                 ---cambiar version python
+.\venv\Scripts\Activate.ps1           --Activar el venv
 
 ls .venv                                --Verifica la estructura
 ls .venv\Scripts
