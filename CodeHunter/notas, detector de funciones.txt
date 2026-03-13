@@ -43,7 +43,7 @@ git status      si se modifica algo
 
 
 git add .
-git commit -m     "Agregué nueva función de análisis"
+git commit -m "Agregué nueva función de análisis"
 git push
 
 
