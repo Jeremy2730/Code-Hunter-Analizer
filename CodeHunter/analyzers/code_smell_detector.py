@@ -25,14 +25,57 @@ def detect_code_smells(project_path: str) -> List[AdvancedFinding]:
 
 
 def analyze_file_for_smells(file_path: str) -> List[AdvancedFinding]:
-    """Analiza un archivo en busca de code smells"""
+    """Analiza un archivo"""
     findings = []
 
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             source = f.read()
+            
+            # 🛡️ PROTECCIÓN: Saltar archivos muy grandes
+            if len(source) > 500000:  # 500KB
+                print(f"  ⚠️  Archivo muy grande, saltando: {file_path}")
+                return findings
+            
             tree = ast.parse(source)
             lines = source.split('\n')
+
+    except Exception as e:
+        print(f"  ❌ Error parseando {file_path}: {str(e)[:50]}")
+        return findings
+
+    # 🔍 Ejecutar detecciones con try-catch individual
+    try:
+        findings.extend(detect_except_pass(tree, file_path, lines))
+    except Exception as e:
+        print(f"  ⚠️  Error en detect_except_pass: {str(e)[:50]}")
+    
+    try:
+        findings.extend(detect_unused_variables(tree, file_path, lines))
+    except Exception as e:
+        print(f"  ⚠️  Error en detect_unused_variables: {str(e)[:50]}")
+    
+    try:
+        findings.extend(detect_constant_conditions(tree, file_path, lines))
+    except Exception as e:
+        print(f"  ⚠️  Error en detect_constant_conditions: {str(e)[:50]}")
+    
+    try:
+        findings.extend(detect_unreachable_code(tree, file_path, lines))
+    except Exception as e:
+        print(f"  ⚠️  Error en detect_unreachable_code: {str(e)[:50]}")
+    
+    try:
+        findings.extend(detect_missing_return(tree, file_path, lines))
+    except Exception as e:
+        print(f"  ⚠️  Error en detect_missing_return: {str(e)[:50]}")
+    
+    try:
+        findings.extend(detect_mutable_default_args(tree, file_path, lines))
+    except Exception as e:
+        print(f"  ⚠️  Error en detect_mutable_default_args: {str(e)[:50]}")
+
+    return findings
 
     except Exception:
         return findings
