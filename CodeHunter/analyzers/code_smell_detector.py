@@ -75,10 +75,6 @@ def analyze_file_for_smells(file_path: str) -> List[AdvancedFinding]:
     except Exception as e:
         print(f"  ⚠️  Error en detect_mutable_default_args: {str(e)[:50]}")
 
-    return findings
-
-    except Exception:
-        return findings
 
     # 🔍 Ejecutar detecciones
     findings.extend(detect_long_functions(tree, file_path, lines))

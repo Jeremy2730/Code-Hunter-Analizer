@@ -2,7 +2,7 @@
 CodeHunter GUI - Estado Compartido
 Objeto que viaja entre vistas para sincronizar datos del análisis.
 """
-
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -36,8 +36,8 @@ class AppState:
         for cb in self._listeners:
             try:
                 cb(event, data)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.error(f"Error notificando listener: {e}")
 
     def reset(self):
         self.diagnosis_data = {}

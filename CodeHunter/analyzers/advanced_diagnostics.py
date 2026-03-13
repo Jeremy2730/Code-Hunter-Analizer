@@ -2,7 +2,7 @@
 Advanced Diagnostics - Orquestador de análisis avanzado
 Integra todos los detectores: Bugs, Vulnerabilidades, Code Smells y Security Hotspots
 """
-
+import time
 from typing import List, Dict
 from ..core.models import AdvancedFinding, Severity, Category
 
@@ -24,16 +24,24 @@ def run_advanced_analysis(project_path: str) -> Dict:
     
     # Ejecutar todos los detectores
     print("  🐛 Detectando bugs...")
+    start = time.time()
     bugs = detect_bugs(project_path)
+    print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(bugs)} bugs")
     
     print("  🔒 Escaneando vulnerabilidades...")
+    start = time.time()
     vulnerabilities = detect_vulnerabilities(project_path)
+    print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(vulnerabilities)} vulnerabilidades")
     
     print("  👃 Analizando code smells...")
+    start = time.time()
     code_smells = detect_code_smells(project_path)
+    print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(code_smells)} code smells")
     
     print("  🔥 Identificando security hotspots...")
+    start = time.time()
     hotspots = detect_security_hotspots(project_path)
+    print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(hotspots)} hotspots")
     
     # Combinar todos los findings
     all_findings = bugs + vulnerabilities + code_smells + hotspots
