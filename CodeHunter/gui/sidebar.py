@@ -12,7 +12,7 @@ class Sidebar(ctk.CTkFrame):
     def __init__(self, parent, state, navigate_fn, colors):
         super().__init__(parent, width=220, fg_color=colors["bg_panel"], corner_radius=0)
         self.grid_propagate(False)
-        self.grid_rowconfigure(5, weight=1)
+        self.grid_rowconfigure(7, weight=1)
         self.state     = state
         self.navigate  = navigate_fn
         self.colors    = colors
@@ -22,6 +22,7 @@ class Sidebar(ctk.CTkFrame):
     def _build_sidebar(self):
         self._build_logo()
         self._build_folder_selector()
+        self._build_analysis_level()
         self._build_run_button()
         self._build_navigation()
         self._build_footer()
@@ -62,6 +63,27 @@ class Sidebar(ctk.CTkFrame):
             text_color=C["text_primary"], corner_radius=6,
             command=self._pick_folder,
         ).grid(row=0, column=0, padx=8, pady=8, sticky="ew")
+
+    def _build_analysis_level(self):
+        C = self.colors
+
+        section_label(self, "NIVEL DE ANÁLISIS", C).grid(
+            row=4, column=0, padx=20, pady=(0, 6), sticky="w"
+        )
+
+        self.analysis_level = ctk.StringVar(value="Principiante")
+
+        level_selector = ctk.CTkComboBox(
+            self,
+            values=["Principiante", "Intermedio", "Experto"],
+            variable=self.analysis_level,
+            height=32,
+            fg_color=C["bg_card"],
+            border_color=C["border"],
+            button_color=C["accent"]
+        )
+
+        level_selector.grid(row=5, column=0, padx=12, pady=(0, 12), sticky="ew")   
 
     def _build_run_button(self):
         C = self.colors
@@ -137,7 +159,10 @@ class Sidebar(ctk.CTkFrame):
 
     def _do_analysis(self):
         try:
-            result = run_code_doctor(self.state.project_path)
+            result = run_code_doctor(
+                self.state.project_path,
+                level=self.analysis_level.get()
+            )
             self.state.diagnosis_data = result
             self.state.findings       = result.get("findings", [])
             self.state.health_score   = result.get("score", 0.0)

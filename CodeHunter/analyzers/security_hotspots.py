@@ -12,11 +12,16 @@ import os
 def detect_security_hotspots(project_path: str) -> List[AdvancedFinding]:
     """Detecta security hotspots en el proyecto"""
     findings = []
+    file_count = 0
 
     for root, files in walk_project(project_path):
         for file in files:
             if not file.endswith(".py"):
                 continue
+            
+            file_count += 1
+            if file_count % 10 == 0:
+                print(f"    📄 Procesados {file_count} archivos...")
 
             file_path = os.path.join(root, file)
             findings.extend(analyze_file_for_hotspots(file_path))
@@ -25,67 +30,42 @@ def detect_security_hotspots(project_path: str) -> List[AdvancedFinding]:
 
 
 def analyze_file_for_hotspots(file_path: str) -> List[AdvancedFinding]:
-    """Analiza un archivo"""
+    """Analiza un archivo en busca de security hotspots"""
     findings = []
 
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             source = f.read()
             
-            # 🛡️ PROTECCIÓN: Saltar archivos muy grandes
-            if len(source) > 500000:  # 500KB
-                print(f"  ⚠️  Archivo muy grande, saltando: {file_path}")
+            # 🛡️ Saltar archivos muy grandes
+            line_count = source.count('\n')
+            if line_count > 100000:
+                print(f"  ⚠️  Archivo muy grande ({line_count} líneas), saltando: {os.path.basename(file_path)}")
                 return findings
             
             tree = ast.parse(source)
             lines = source.split('\n')
 
-    except Exception as e:
-        print(f"  ❌ Error parseando {file_path}: {str(e)[:50]}")
+    except Exception:
         return findings
 
-    # 🔍 Ejecutar detecciones con try-catch individual
-    try:
-        findings.extend(detect_except_pass(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_except_pass: {str(e)[:50]}")
+    # 🔍 Ejecutar detecciones con protección
+    detectors = [
+        ("random_for_security", lambda t, f, l: detect_random_for_security(t, f, l)),
+        ("files_without_context", lambda t, f, l: detect_files_without_context(t, f, l)),
+        ("ssl_verification_disabled", lambda t, f, l: detect_ssl_verification_disabled(t, f, l)),
+        ("debug_mode", lambda t, f, l: detect_debug_mode(t, f, l, source)),
+        ("permissive_cors", lambda t, f, l: detect_permissive_cors(t, f, l, source)),
+        ("unsafe_file_permissions", lambda t, f, l: detect_unsafe_file_permissions(t, f, l)),
+        ("temp_file_usage", lambda t, f, l: detect_temp_file_usage(t, f, l)),
+        ("http_without_timeout", lambda t, f, l: detect_http_without_timeout(t, f, l)),
+    ]
     
-    try:
-        findings.extend(detect_unused_variables(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_unused_variables: {str(e)[:50]}")
-    
-    try:
-        findings.extend(detect_constant_conditions(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_constant_conditions: {str(e)[:50]}")
-    
-    try:
-        findings.extend(detect_unreachable_code(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_unreachable_code: {str(e)[:50]}")
-    
-    try:
-        findings.extend(detect_missing_return(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_missing_return: {str(e)[:50]}")
-    
-    try:
-        findings.extend(detect_mutable_default_args(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_mutable_default_args: {str(e)[:50]}")
-
-    return findings
-
-    # 🔍 Ejecutar detecciones
-    findings.extend(detect_random_for_security(tree, file_path, lines))
-    findings.extend(detect_files_without_context(tree, file_path, lines))
-    findings.extend(detect_ssl_verification_disabled(tree, file_path, lines))
-    findings.extend(detect_debug_mode(tree, file_path, lines, source))
-    findings.extend(detect_permissive_cors(tree, file_path, lines, source))
-    findings.extend(detect_unsafe_file_permissions(tree, file_path, lines))
-    findings.extend(detect_temp_file_usage(tree, file_path, lines))
-    findings.extend(detect_http_without_timeout(tree, file_path, lines))
+    for name, detector in detectors:
+        try:
+            findings.extend(detector(tree, file_path, lines))
+        except Exception:
+            pass
 
     return findings
 
@@ -93,8 +73,7 @@ def analyze_file_for_hotspots(file_path: str) -> List[AdvancedFinding]:
 def detect_random_for_security(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
     """Detecta uso de random en lugar de secrets para seguridad"""
     findings = []
-
-    # Detectar imports de random
+    
     has_random_import = False
     has_secrets_import = False
 
@@ -112,7 +91,6 @@ def detect_random_for_security(tree: ast.AST, file_path: str, lines: List[str]) 
                 if node.module == 'secrets':
                     has_secrets_import = True
 
-    # Si usa random pero no secrets, puede ser hotspot
     if has_random_import and not has_secrets_import:
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
@@ -144,6 +122,17 @@ def detect_files_without_context(tree: ast.AST, file_path: str, lines: List[str]
         def __init__(self):
             self.findings = []
             self.in_with = False
+            self.depth = 0
+            self.max_depth = 200
+
+        def visit(self, node):
+            self.depth += 1
+            if self.depth > self.max_depth:
+                return
+            try:
+                super().visit(node)
+            finally:
+                self.depth -= 1
 
         def visit_With(self, node):
             self.in_with = True
@@ -151,7 +140,6 @@ def detect_files_without_context(tree: ast.AST, file_path: str, lines: List[str]
             self.in_with = False
 
         def visit_Call(self, node):
-            # Detectar open() fuera de with
             if isinstance(node.func, ast.Name) and node.func.id == 'open':
                 if not self.in_with:
                     line_num = node.lineno
@@ -169,9 +157,12 @@ def detect_files_without_context(tree: ast.AST, file_path: str, lines: List[str]
 
             self.generic_visit(node)
 
-    detector = FileOpenDetector()
-    detector.visit(tree)
-    findings.extend(detector.findings)
+    try:
+        detector = FileOpenDetector()
+        detector.visit(tree)
+        findings.extend(detector.findings)
+    except RecursionError:
+        pass
 
     return findings
 
@@ -182,7 +173,6 @@ def detect_ssl_verification_disabled(tree: ast.AST, file_path: str, lines: List[
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
-            # Buscar verify=False en requests
             for keyword in node.keywords:
                 if keyword.arg == 'verify':
                     if isinstance(keyword.value, ast.Constant) and keyword.value.value is False:
@@ -204,20 +194,27 @@ def detect_ssl_verification_disabled(tree: ast.AST, file_path: str, lines: List[
 
 
 def detect_debug_mode(tree: ast.AST, file_path: str, lines: List[str], source: str) -> List[AdvancedFinding]:
-    """Detecta modo debug activado en producción"""
+    """Detecta modo debug activado - SOLO en archivos de configuración"""
     findings = []
+    
+    # 🛡️ SOLO buscar en archivos de configuración/settings
+    filename = os.path.basename(file_path).lower()
+    if not any(x in filename for x in ['settings', 'config', 'configuration', 'env']):
+        return findings
 
-    # Buscar DEBUG = True o debug=True
     debug_patterns = [
         'DEBUG = True',
         'DEBUG=True',
         'debug = True',
         'debug=True',
-        "DEBUG = 'True'",
-        "debug = 'True'",
     ]
 
     for i, line in enumerate(lines, 1):
+        # Ignorar comentarios y docstrings
+        stripped = line.strip()
+        if stripped.startswith('#') or stripped.startswith('"""') or stripped.startswith("'''"):
+            continue
+            
         for pattern in debug_patterns:
             if pattern in line:
                 findings.append(AdvancedFinding(
@@ -229,6 +226,7 @@ def detect_debug_mode(tree: ast.AST, file_path: str, lines: List[str], source: s
                     suggestion="Asegurar que DEBUG esté en False en producción. Usar variables de entorno.",
                     code_snippet=line.strip()
                 ))
+                break
 
     return findings
 
@@ -237,7 +235,6 @@ def detect_permissive_cors(tree: ast.AST, file_path: str, lines: List[str], sour
     """Detecta configuraciones CORS permisivas"""
     findings = []
 
-    # Buscar CORS con wildcard
     cors_patterns = [
         'Access-Control-Allow-Origin": "*"',
         "Access-Control-Allow-Origin': '*'",
@@ -258,6 +255,7 @@ def detect_permissive_cors(tree: ast.AST, file_path: str, lines: List[str], sour
                     code_snippet=line.strip(),
                     cwe_id="CWE-942"
                 ))
+                break
 
     return findings
 
@@ -268,7 +266,6 @@ def detect_unsafe_file_permissions(tree: ast.AST, file_path: str, lines: List[st
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
-            # Detectar os.chmod con permisos 777
             if isinstance(node.func, ast.Attribute):
                 if (isinstance(node.func.value, ast.Name) and 
                     node.func.value.id == 'os' and 
@@ -276,7 +273,6 @@ def detect_unsafe_file_permissions(tree: ast.AST, file_path: str, lines: List[st
                     
                     if len(node.args) >= 2:
                         perm_arg = node.args[1]
-                        # Verificar si es 0o777 o 511 (decimal)
                         if isinstance(perm_arg, ast.Constant):
                             if perm_arg.value in [0o777, 511, 0o666, 438]:
                                 line_num = node.lineno
@@ -302,26 +298,24 @@ def detect_temp_file_usage(tree: ast.AST, file_path: str, lines: List[str]) -> L
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Attribute):
-                # Detectar open() en /tmp sin usar tempfile
-                if isinstance(node.func, ast.Name) and node.func.id == 'open':
-                    if node.args:
-                        first_arg = node.args[0]
-                        if isinstance(first_arg, ast.Constant):
-                            if isinstance(first_arg.value, str) and '/tmp/' in first_arg.value:
-                                line_num = node.lineno
-                                snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
+            if isinstance(node.func, ast.Name) and node.func.id == 'open':
+                if node.args:
+                    first_arg = node.args[0]
+                    if isinstance(first_arg, ast.Constant):
+                        if isinstance(first_arg.value, str) and '/tmp/' in first_arg.value:
+                            line_num = node.lineno
+                            snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
 
-                                findings.append(AdvancedFinding(
-                                    severity=Severity.MINOR,
-                                    category=Category.SECURITY_HOTSPOT,
-                                    message="Archivo temporal creado manualmente en /tmp/",
-                                    file=file_path,
-                                    line=line_num,
-                                    suggestion="Usar tempfile.NamedTemporaryFile() o tempfile.mkstemp() para seguridad.",
-                                    code_snippet=snippet,
-                                    cwe_id="CWE-377"
-                                ))
+                            findings.append(AdvancedFinding(
+                                severity=Severity.MINOR,
+                                category=Category.SECURITY_HOTSPOT,
+                                message="Archivo temporal creado manualmente en /tmp/",
+                                file=file_path,
+                                line=line_num,
+                                suggestion="Usar tempfile.NamedTemporaryFile() o tempfile.mkstemp() para seguridad.",
+                                code_snippet=snippet,
+                                cwe_id="CWE-377"
+                            ))
 
     return findings
 
@@ -335,12 +329,10 @@ def detect_http_without_timeout(tree: ast.AST, file_path: str, lines: List[str])
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
             if isinstance(node.func, ast.Attribute):
-                # Detectar requests.get() sin timeout
                 if (isinstance(node.func.value, ast.Name) and 
                     node.func.value.id == 'requests' and 
                     node.func.attr in http_methods):
                     
-                    # Verificar si tiene timeout
                     has_timeout = any(kw.arg == 'timeout' for kw in node.keywords)
                     
                     if not has_timeout:

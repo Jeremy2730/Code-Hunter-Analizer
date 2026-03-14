@@ -12,11 +12,16 @@ import os
 def detect_bugs(project_path: str) -> List[AdvancedFinding]:
     """Detecta bugs lógicos en el proyecto"""
     findings = []
-
+    file_count = 0
+    
     for root, files in walk_project(project_path):
         for file in files:
             if not file.endswith(".py"):
                 continue
+            
+            file_count += 1
+            if file_count % 10 == 0:
+                print(f"    📄 Procesados {file_count} archivos...")
 
             file_path = os.path.join(root, file)
             findings.extend(analyze_file_for_bugs(file_path))
@@ -32,58 +37,36 @@ def analyze_file_for_bugs(file_path: str) -> List[AdvancedFinding]:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             source = f.read()
             
-            # 🛡️ PROTECCIÓN: Saltar archivos muy grandes
-            if len(source) > 500000:  # 500KB
-                print(f"  ⚠️  Archivo muy grande, saltando: {file_path}")
+            # 🛡️ Saltar archivos muy grandes (>100k líneas)
+            line_count = source.count('\n')
+            if line_count > 100000:
+                print(f"  ⚠️  Archivo muy grande ({line_count} líneas), saltando: {os.path.basename(file_path)}")
                 return findings
             
             tree = ast.parse(source)
             lines = source.split('\n')
 
     except Exception as e:
-        print(f"  ❌ Error parseando {file_path}: {str(e)[:50]}")
+        # Silenciar errores de parseo para no spam
         return findings
 
-    # 🔍 Ejecutar detecciones con try-catch individual
-    try:
-        findings.extend(detect_except_pass(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_except_pass: {str(e)[:50]}")
+    # 🔍 Ejecutar detecciones con protección individual
+    detectors = [
+        ("except_pass", detect_except_pass),
+        ("unused_variables", detect_unused_variables),
+        ("constant_conditions", detect_constant_conditions),
+        ("unreachable_code", detect_unreachable_code),
+        ("missing_return", detect_missing_return),
+        ("mutable_default_args", detect_mutable_default_args),
+    ]
     
-    try:
-        findings.extend(detect_unused_variables(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_unused_variables: {str(e)[:50]}")
-    
-    try:
-        findings.extend(detect_constant_conditions(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_constant_conditions: {str(e)[:50]}")
-    
-    try:
-        findings.extend(detect_unreachable_code(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_unreachable_code: {str(e)[:50]}")
-    
-    try:
-        findings.extend(detect_missing_return(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_missing_return: {str(e)[:50]}")
-    
-    try:
-        findings.extend(detect_mutable_default_args(tree, file_path, lines))
-    except Exception as e:
-        print(f"  ⚠️  Error en detect_mutable_default_args: {str(e)[:50]}")
-
-    return findings
-
-    # 🔍 Ejecutar detecciones
-    findings.extend(detect_except_pass(tree, file_path, lines))
-    findings.extend(detect_unused_variables(tree, file_path, lines))
-    findings.extend(detect_constant_conditions(tree, file_path, lines))
-    findings.extend(detect_unreachable_code(tree, file_path, lines))
-    findings.extend(detect_missing_return(tree, file_path, lines))
-    findings.extend(detect_mutable_default_args(tree, file_path, lines))
+    for name, detector in detectors:
+        try:
+            findings.extend(detector(tree, file_path, lines))
+        except RecursionError:
+            print(f"  ⚠️  RecursionError en {name} para {os.path.basename(file_path)}")
+        except Exception:
+            pass  # Silenciar errores para no interrumpir el análisis
 
     return findings
 
@@ -94,7 +77,6 @@ def detect_except_pass(tree: ast.AST, file_path: str, lines: List[str]) -> List[
 
     for node in ast.walk(tree):
         if isinstance(node, ast.ExceptHandler):
-            # Verificar si el cuerpo solo tiene 'pass'
             if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                 line_num = node.lineno
                 snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
@@ -118,8 +100,19 @@ def detect_unused_variables(tree: ast.AST, file_path: str, lines: List[str]) -> 
 
     class VariableAnalyzer(ast.NodeVisitor):
         def __init__(self):
-            self.assigned = {}  # {nombre: línea}
+            self.assigned = {}
             self.used = set()
+            self.depth = 0
+            self.max_depth = 200  # 🛡️ Límite de recursión
+
+        def visit(self, node):
+            self.depth += 1
+            if self.depth > self.max_depth:
+                return
+            try:
+                super().visit(node)
+            finally:
+                self.depth -= 1
 
         def visit_Assign(self, node):
             for target in node.targets:
@@ -132,12 +125,19 @@ def detect_unused_variables(tree: ast.AST, file_path: str, lines: List[str]) -> 
                 self.used.add(node.id)
             self.generic_visit(node)
 
-    analyzer = VariableAnalyzer()
-    analyzer.visit(tree)
+    try:
+        analyzer = VariableAnalyzer()
+        analyzer.visit(tree)
+    except RecursionError:
+        return findings
 
-    # Variables asignadas pero no usadas
+    # Variables asignadas pero no usadas (solo reportar las más importantes)
     for var_name, line_num in analyzer.assigned.items():
         if var_name not in analyzer.used and not var_name.startswith('_'):
+            # Ignorar variables comunes en enums
+            if var_name.isupper():
+                continue
+                
             snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
 
             findings.append(AdvancedFinding(
@@ -159,7 +159,6 @@ def detect_constant_conditions(tree: ast.AST, file_path: str, lines: List[str]) 
 
     for node in ast.walk(tree):
         if isinstance(node, ast.If):
-            # Verificar si la condición es un literal True o False
             if isinstance(node.test, ast.Constant):
                 if node.test.value is True or node.test.value is False:
                     line_num = node.lineno
@@ -185,14 +184,24 @@ def detect_unreachable_code(tree: ast.AST, file_path: str, lines: List[str]) -> 
     class UnreachableDetector(ast.NodeVisitor):
         def __init__(self):
             self.findings = []
+            self.depth = 0
+            self.max_depth = 200
+
+        def visit(self, node):
+            self.depth += 1
+            if self.depth > self.max_depth:
+                return
+            try:
+                super().visit(node)
+            finally:
+                self.depth -= 1
 
         def visit_FunctionDef(self, node):
             self.check_body(node.body)
-            self.generic_visit(node)
+            # NO llamar generic_visit para evitar recursión profunda
 
         def check_body(self, body):
             for i, stmt in enumerate(body):
-                # Si hay return o raise, el código siguiente es inalcanzable
                 if isinstance(stmt, (ast.Return, ast.Raise)):
                     if i + 1 < len(body):
                         next_stmt = body[i + 1]
@@ -210,9 +219,12 @@ def detect_unreachable_code(tree: ast.AST, file_path: str, lines: List[str]) -> 
                         ))
                         break
 
-    detector = UnreachableDetector()
-    detector.visit(tree)
-    findings.extend(detector.findings)
+    try:
+        detector = UnreachableDetector()
+        detector.visit(tree)
+        findings.extend(detector.findings)
+    except RecursionError:
+        pass
 
     return findings
 
@@ -224,11 +236,22 @@ def detect_missing_return(tree: ast.AST, file_path: str, lines: List[str]) -> Li
     class ReturnAnalyzer(ast.NodeVisitor):
         def __init__(self):
             self.findings = []
+            self.depth = 0
+            self.max_depth = 200
+
+        def visit(self, node):
+            self.depth += 1
+            if self.depth > self.max_depth:
+                return
+            try:
+                super().visit(node)
+            finally:
+                self.depth -= 1
 
         def visit_FunctionDef(self, node):
-            # Ignorar __init__ y funciones decoradas con @property
+            # Ignorar __init__
             if node.name == "__init__":
-                return
+                return  # 🛡️ NO continuar visitando
 
             has_return_with_value = False
             has_return_without_value = False
@@ -254,10 +277,15 @@ def detect_missing_return(tree: ast.AST, file_path: str, lines: List[str]) -> Li
                     suggestion="Asegurar que todos los caminos de ejecución retornen un valor o ninguno.",
                     code_snippet=snippet
                 ))
+            
+            # 🛡️ NO llamar generic_visit()
 
-    analyzer = ReturnAnalyzer()
-    analyzer.visit(tree)
-    findings.extend(analyzer.findings)
+    try:
+        analyzer = ReturnAnalyzer()
+        analyzer.visit(tree)
+        findings.extend(analyzer.findings)
+    except RecursionError:
+        pass
 
     return findings
 
@@ -269,7 +297,6 @@ def detect_mutable_default_args(tree: ast.AST, file_path: str, lines: List[str])
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             for i, default in enumerate(node.args.defaults):
-                # Detectar listas o diccionarios como defaults
                 if isinstance(default, (ast.List, ast.Dict, ast.Set)):
                     line_num = node.lineno
                     snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""

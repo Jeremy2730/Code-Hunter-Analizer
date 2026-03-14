@@ -42,8 +42,10 @@ def walk_project(project_path: str):
         # Bloquear descenso en carpetas ignoradas (in-place)
         dirs[:] = [
             d for d in dirs
-            if d not in IGNORE_DIRS and not d.endswith(".egg-info")
-        ]
+            if d not in IGNORE_DIRS
+            and not d.endswith(".egg-info")
+            and not (d.startswith(".") and d != ".git")
+]
 
         # Saltar si la ruta actual contiene un segmento ignorado
         # (cubre casos donde os.walk ya entró antes del filtrado)
