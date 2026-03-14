@@ -105,3 +105,22 @@ Eso muy pocos analizadores lo hacen bien.
 Si quieres, 
 en el siguiente paso te paso el algoritmo profesional 
 para detectar funciones duplicadas usando AST + hash estructural.
+
+
+🔥 detección de complejidad ciclomática (McCabe Complexity)
+
+
+
+🧠 Detector de complejidad ciclomática
+
+Detecta funciones como:
+
+if
+for
+while
+try
+and/or
+
+y calcula:
+
+Complexity Score

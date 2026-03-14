@@ -8,6 +8,9 @@ from ..core.models import AdvancedFinding, Severity, Category
 from ..utils.project_walker import walk_project
 import os
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Registro global de hashes de funciones (para detectar duplicados entre archivos)
 GLOBAL_FUNCTION_HASHES = {}
@@ -213,18 +216,6 @@ def analyze_file_for_smells(file_path: str) -> List[AdvancedFinding]:
 
     except Exception:
         return findings
-
-    # 🔍 Ejecutar detecciones con protección
-    """detectors = [
-        ("long_functions", detect_long_functions),
-        ("too_many_parameters", detect_too_many_parameters),
-        ("deep_nesting", detect_deep_nesting),
-        ("god_classes", detect_god_classes),
-        ("poor_naming", detect_poor_naming),
-        ("magic_numbers", detect_magic_numbers),
-        ("long_parameter_list", detect_long_parameter_list),
-        ("duplicate_code", detect_duplicate_code),
-    ]"""
     
     # 🚀 Nuevo análisis optimizado (1 sola pasada del AST)
 
@@ -365,7 +356,7 @@ def detect_deep_nesting(tree: ast.AST, file_path: str, lines: List[str]) -> List
         analyzer.visit(tree)
         findings.extend(analyzer.findings)
     except RecursionError:
-        pass
+        logger.warning(f"RecursionError en detect_deep_nesting analizando {file_path}")
 
     return findings
 
@@ -462,7 +453,7 @@ def detect_poor_naming(tree: ast.AST, file_path: str, lines: List[str]) -> List[
         analyzer.visit(tree)
         findings.extend(analyzer.findings)
     except RecursionError:
-        pass
+        logger.warning(f"RecursionError en detect_poor_naming analizando {file_path}")
 
     return findings
 
@@ -520,7 +511,7 @@ def detect_magic_numbers(tree: ast.AST, file_path: str, lines: List[str]) -> Lis
         detector.visit(tree)
         findings.extend(detector.findings)
     except RecursionError:
-        pass
+        logger.warning(f"RecursionError en detect_magic_numbers analizando {file_path}")
 
     return findings
 
