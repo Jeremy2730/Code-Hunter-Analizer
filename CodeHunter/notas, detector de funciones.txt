@@ -77,3 +77,31 @@ Get-Content ""
 python test_analysis.py "C:\Users\ADMIN\Desktop\CodeHunter_Analizer -0.2"
 
 crear python y ejecutar
+
+
+
+
+
+🔥 mejoras nivel herramienta profesional
+
+1️⃣ barra de progreso real del análisis
+2️⃣ análisis paralelo (multiprocessing) → 5-10x más rápido
+3️⃣ cache de AST → escanea proyectos gigantes rápido
+4️⃣ detector de funciones duplicadas
+
+🔥 Detector de funciones duplicadas
+
+Ejemplo de hallazgo:
+
+[MAJOR] Función duplicada detectada
+Archivo: utils/helpers.py
+Línea: 120
+
+Función muy similar encontrada en:
+services/helpers.py:45
+
+Eso muy pocos analizadores lo hacen bien.
+
+Si quieres, 
+en el siguiente paso te paso el algoritmo profesional 
+para detectar funciones duplicadas usando AST + hash estructural.

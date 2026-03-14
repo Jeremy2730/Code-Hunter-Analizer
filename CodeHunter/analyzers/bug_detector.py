@@ -3,10 +3,11 @@ Bug Detector - Detecta errores lógicos en el código
 """
 
 import ast
+import logging
+import os
 from typing import List
 from ..core.models import AdvancedFinding, Severity, Category
 from ..utils.project_walker import walk_project
-import os
 
 
 def detect_bugs(project_path: str) -> List[AdvancedFinding]:
@@ -47,8 +48,9 @@ def analyze_file_for_bugs(file_path: str) -> List[AdvancedFinding]:
             lines = source.split('\n')
 
     except Exception as e:
-        # Silenciar errores de parseo para no spam
-        return findings
+        logging.warning(
+            f"Detector {name} falló en {os.path.basename(file_path)}: {e}"
+        )
 
     # 🔍 Ejecutar detecciones con protección individual
     detectors = [
@@ -64,9 +66,11 @@ def analyze_file_for_bugs(file_path: str) -> List[AdvancedFinding]:
         try:
             findings.extend(detector(tree, file_path, lines))
         except RecursionError:
-            print(f"  ⚠️  RecursionError en {name} para {os.path.basename(file_path)}")
-        except Exception:
-            pass  # Silenciar errores para no interrumpir el análisis
+            print(f"⚠️ RecursionError en {name} para {os.path.basename(file_path)}")
+        except Exception as e:
+            logging.warning(
+                f"Detector {name} falló en {os.path.basename(file_path)}: {e}"
+            )
 
     return findings
 
@@ -149,6 +153,11 @@ def detect_unused_variables(tree: ast.AST, file_path: str, lines: List[str]) -> 
                 suggestion=f"Eliminar la variable '{var_name}' si no es necesaria, o usar _ para indicar que es intencional.",
                 code_snippet=snippet
             ))
+    try:
+        analyzer = VariableAnalyzer()
+        analyzer.visit(tree)
+    except RecursionError:
+        pass
 
     return findings
 
@@ -219,12 +228,9 @@ def detect_unreachable_code(tree: ast.AST, file_path: str, lines: List[str]) -> 
                         ))
                         break
 
-    try:
-        detector = UnreachableDetector()
-        detector.visit(tree)
-        findings.extend(detector.findings)
-    except RecursionError:
-        pass
+    detector = UnreachableDetector()
+    detector.visit(tree)
+    findings.extend(detector.findings)
 
     return findings
 
@@ -285,10 +291,16 @@ def detect_missing_return(tree: ast.AST, file_path: str, lines: List[str]) -> Li
         analyzer.visit(tree)
         findings.extend(analyzer.findings)
     except RecursionError:
-        pass
+        # Silenciar errores de recursión explícitamente si es necesario
+        return findings
+    except Exception as e:
+        logging.warning(
+            f"Error en detect_missing_return para {os.path.basename(file_path)}: {e}"
+        )
 
     return findings
-
+    
+    
 
 def detect_mutable_default_args(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
     """Detecta argumentos mutables por defecto ([], {})"""
