@@ -7,76 +7,61 @@ import logging
 import os
 from typing import List
 from ..core.models import AdvancedFinding, Severity, Category
-from ..utils.project_walker import walk_python_files
-
 
 
 MAX_FILE_LINES = 100000
 MAX_AST_DEPTH = 200
 
 
-def detect_bugs(project_path: str) -> List[AdvancedFinding]:
-    """Detecta bugs lógicos en el proyecto"""
+def run_bug_detectors(tree, file_path, lines, config):
 
     findings = []
-    file_count = 0
 
-    for file_path in walk_python_files(project_path):
-
-        file_count += 1
-        if file_count % 10 == 0:
-            print(f"    📄 Procesados {file_count} archivos...")
-
-        result = analyze_file_for_bugs(file_path)
-        if result:
-            findings.extend(result)
+    findings.extend(detect_except_pass(tree, file_path, lines))
+    findings.extend(detect_unused_variables(tree, file_path, lines))
+    findings.extend(detect_constant_conditions(tree, file_path, lines))
+    findings.extend(detect_unreachable_code(tree, file_path, lines))
+    findings.extend(detect_missing_return(tree, file_path, lines))
+    findings.extend(detect_mutable_default_args(tree, file_path, lines))
 
     return findings
 
 def analyze_file_for_bugs(file_path: str) -> List[AdvancedFinding]:
     """Analiza un archivo en busca de bugs"""
+    
     findings = []
 
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             source = f.read()
-            
-            # 🛡️ Saltar archivos muy grandes (>100k líneas)
-            line_count = source.count('\n')
-            if line_count > MAX_FILE_LINES:
-                print(f"  ⚠️  Archivo muy grande ({line_count} líneas), saltando: {os.path.basename(file_path)}")
-                return findings
-            
-            tree = ast.parse(source)
-            lines = source.split('\n')
+
+        line_count = source.count('\n')
+        if line_count > MAX_FILE_LINES:
+            print(f"  ⚠️  Archivo muy grande ({line_count} líneas), saltando: {os.path.basename(file_path)}")
+            return findings
+
+        tree = ast.parse(source)
+        lines = source.split('\n')
 
     except Exception as e:
         logging.warning(f"Error analizando {os.path.basename(file_path)}: {e}")
+        return findings
 
 
-    # 🔍 Ejecutar detecciones con protección individual
     detectors = [
-        ("except_pass", detect_except_pass),
-        ("unused_variables", detect_unused_variables),
-        ("constant_conditions", detect_constant_conditions),
-        ("unreachable_code", detect_unreachable_code),
-        ("missing_return", detect_missing_return),
-        ("mutable_default_args", detect_mutable_default_args),
+        detect_except_pass,
+        detect_unused_variables,
+        detect_constant_conditions,
+        detect_unreachable_code,
+        detect_missing_return,
+        detect_mutable_default_args,
     ]
-    
-    try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            source = f.read()
 
-            line_count = source.count('\n')
-            if line_count > MAX_FILE_LINES:
-                return findings
-
-            tree = ast.parse(source)
-            lines = source.split('\n')
-
-    except Exception as e:
-        logging.warning(f"Error analizando {os.path.basename(file_path)}: {e}")
+    for detector in detectors:
+        try:
+            findings.extend(detector(tree, file_path, lines))
+        except Exception as e:
+            logging.warning(f"Error en detector {detector.__name__} en {os.path.basename(file_path)}: {e}")
 
     return findings
 

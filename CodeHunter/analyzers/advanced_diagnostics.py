@@ -5,13 +5,8 @@ Integra todos los detectores: Bugs, Vulnerabilidades, Code Smells y Security Hot
 import time
 from typing import List, Dict
 from ..core.models import AdvancedFinding, Severity, Category
-
-from .bug_detector import detect_bugs
-from .vulnerability_scanner import detect_vulnerabilities
-from .code_smell_detector import detect_code_smells
-from .security_hotspots import detect_security_hotspots
 from ..core.config_loader import load_config
-
+from .analysis_engine import run_project_analysis
 
 # Penalizaciones para quality score
 PENALTY_BLOCKER = 25
@@ -38,45 +33,36 @@ SEVERITY_ORDER_INFO = 4
 
 
 def run_advanced_analysis(project_path: str) -> Dict:
-    config = load_config(project_path)
     """
     Ejecuta análisis avanzado completo del proyecto
-    
-    Returns:
-        Dict con findings categorizados y métricas
     """
-    
+
+    config = load_config(project_path)
+
     print("🔍 Iniciando análisis avanzado...")
-    
-    # Ejecutar todos los detectores
-    print("  🐛 Detectando bugs...")
+
     start = time.time()
-    bugs = detect_bugs(project_path, config)
-    print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(bugs)} bugs")
-    
-    print("  🔒 Escaneando vulnerabilidades...")
-    start = time.time()
-    vulnerabilities = detect_vulnerabilities(project_path, config)
-    print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(vulnerabilities)} vulnerabilidades")
-    
-    print("  👃 Analizando code smells...")
-    start = time.time()
-    code_smells = detect_code_smells(project_path, config)
-    print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(code_smells)} code smells")
-    
-    print("  🔥 Identificando security hotspots...")
-    start = time.time()
-    hotspots = detect_security_hotspots(project_path, config)
-    print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(hotspots)} hotspots")
-    
-    # Combinar todos los findings
-    all_findings = bugs + vulnerabilities + code_smells + hotspots
-    
-    # Calcular métricas
+
+    # 🚀 nuevo motor de análisis (1 solo recorrido del AST)
+    all_findings = run_project_analysis(project_path, config)
+
+    elapsed = time.time() - start
+
+    # separar por categoría
+    bugs = [f for f in all_findings if f.category == Category.BUG]
+    vulnerabilities = [f for f in all_findings if f.category == Category.VULNERABILITY]
+    code_smells = [f for f in all_findings if f.category == Category.CODE_SMELL]
+    hotspots = [f for f in all_findings if f.category == Category.SECURITY]
+
+    print(f"  🐛 Bugs: {len(bugs)}")
+    print(f"  🔒 Vulnerabilidades: {len(vulnerabilities)}")
+    print(f"  👃 Code Smells: {len(code_smells)}")
+    print(f"  🔥 Hotspots: {len(hotspots)}")
+
+    print(f"✅ Análisis completado en {elapsed:.2f}s - {len(all_findings)} hallazgos\n")
+
     metrics = calculate_advanced_metrics(all_findings)
-    
-    print(f"✅ Análisis completado: {len(all_findings)} hallazgos detectados\n")
-    
+
     return {
         "findings": all_findings,
         "metrics": metrics,

@@ -7,7 +7,6 @@ import logging
 import ast
 from typing import List
 from ..core.models import AdvancedFinding, Severity, Category
-from ..utils.project_walker import walk_python_files
 
 
 logger = logging.getLogger(__name__)
@@ -180,20 +179,16 @@ class GlobalAnalyzer(ast.NodeVisitor):
 
         self.generic_visit(node)
 
-def detect_code_smells(project_path: str, config: dict):
-
-    GLOBAL_FUNCTION_HASHES.clear()
+def run_smell_detectors(tree, file_path, lines, config):
 
     findings = []
-    file_count = 0
 
-    for file_path in walk_python_files(project_path):
+    analyzer = GlobalAnalyzer(file_path, lines, findings, config)
+    analyzer.visit(tree)
 
-        file_count += 1
-        if file_count % 10 == 0:
-            print(f"    📄 Procesados {file_count} archivos...")
-
-        findings.extend(analyze_file_for_smells(file_path, config))
+    findings.extend(detect_deep_nesting(tree, file_path, lines))
+    findings.extend(detect_poor_naming(tree, file_path, lines))
+    findings.extend(detect_long_parameter_list(tree, file_path, lines))
 
     return findings
 
