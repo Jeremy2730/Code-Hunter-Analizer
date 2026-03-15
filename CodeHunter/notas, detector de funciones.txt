@@ -182,7 +182,10 @@ una mejora que multiplica x5 la calidad del detector:
 detectar duplicación parcial de código (no solo funciones iguales).
 
 ------------
+🔥 detectar código muerto automáticamente (funciones nunca llamadas en todo el proyecto).
+Eso es una feature muy potente en análisis estático.
 
+----------
 
 
 
