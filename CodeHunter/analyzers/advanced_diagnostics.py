@@ -7,6 +7,8 @@ from typing import List, Dict
 from ..core.models import AdvancedFinding, Severity, Category
 from ..core.config_loader import load_config
 from .analysis_engine import run_project_analysis
+from collections import defaultdict
+from ..utils.finding_utils import group_findings_by_category
 
 # Penalizaciones para quality score
 PENALTY_BLOCKER = 25
@@ -31,6 +33,15 @@ SEVERITY_ORDER_MAJOR = 2
 SEVERITY_ORDER_MINOR = 3
 SEVERITY_ORDER_INFO = 4
 
+def group_findings_by_category(findings):
+
+    grouped = defaultdict(list)
+
+    for finding in findings:
+        grouped[finding.category].append(finding)
+
+    return grouped
+
 
 def run_advanced_analysis(project_path: str) -> Dict:
     """
@@ -49,14 +60,16 @@ def run_advanced_analysis(project_path: str) -> Dict:
     elapsed = time.time() - start
 
     # separar por categoría
-    bugs = [f for f in all_findings if f.category == Category.BUG]
-    vulnerabilities = [f for f in all_findings if f.category == Category.VULNERABILITY]
-    code_smells = [f for f in all_findings if f.category == Category.CODE_SMELL]
-    hotspots = [f for f in all_findings if f.category == Category.SECURITY]
+    grouped = group_findings_by_category(all_findings)
+
+    bugs = grouped[Category.BUG]
+    vulnerabilities = grouped[Category.VULNERABILITY]
+    smells = grouped[Category.CODE_SMELL]
+    hotspots = grouped[Category.SECURITY_HOTSPOT]
 
     print(f"  🐛 Bugs: {len(bugs)}")
     print(f"  🔒 Vulnerabilidades: {len(vulnerabilities)}")
-    print(f"  👃 Code Smells: {len(code_smells)}")
+    print(f"  👃 Code Smells: {len(smells)}")
     print(f"  🔥 Hotspots: {len(hotspots)}")
 
     print(f"✅ Análisis completado en {elapsed:.2f}s - {len(all_findings)} hallazgos\n")
@@ -69,7 +82,7 @@ def run_advanced_analysis(project_path: str) -> Dict:
         "by_category": {
             "bugs": bugs,
             "vulnerabilities": vulnerabilities,
-            "code_smells": code_smells,
+            "code_smells": smells,
             "security_hotspots": hotspots
         }
     }
