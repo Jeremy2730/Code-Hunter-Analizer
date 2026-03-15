@@ -27,7 +27,9 @@ def detect_bugs(project_path: str) -> List[AdvancedFinding]:
         if file_count % 10 == 0:
             print(f"    📄 Procesados {file_count} archivos...")
 
-        findings.extend(analyze_file_for_bugs(file_path))
+        result = analyze_file_for_bugs(file_path)
+        if result:
+            findings.extend(result)
 
     return findings
 
@@ -75,7 +77,8 @@ def analyze_file_for_bugs(file_path: str) -> List[AdvancedFinding]:
 
     except Exception as e:
         logging.warning(f"Error analizando {os.path.basename(file_path)}: {e}")
-        return findings
+
+    return findings
 
 
 def detect_except_pass(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:

@@ -165,28 +165,14 @@ FUNCIONES DEFINIDAS PERO NUNCA USADAS
 hacer que el proyecto se analice 2-4 veces más rápido usando paralelización del análisis de archivos 
 (algo que usan los analizadores profesionales). Es una mejora relativamente corta pero muy poderosa.
 
+------
+Un detector que encuentre funciones que retornan None accidentalmente
 
-🩺 Ejecutando Code Doctor...
-============================================================
-🔍 Iniciando análisis avanzado...
-  🐛 Detectando bugs...
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "E:\proyectos IA\CodeHunter_Analizer -0.2\CodeHunter\__main__.py", line 4, in <module>
-    main()
-    ~~~~^^
-  File "E:\proyectos IA\CodeHunter_Analizer -0.2\CodeHunter\main_cli.py", line 10, in main
-    run_cli(project_path)
-    ~~~~~~~^^^^^^^^^^^^^^
-  File "E:\proyectos IA\CodeHunter_Analizer -0.2\CodeHunter\ui\cli_controller.py", line 54, in run_cli
-    analysis_data = run_code_doctor(project_path)
-  File "E:\proyectos IA\CodeHunter_Analizer -0.2\CodeHunter\analyzers\system_doctor.py", line 24, in run_code_doctor
-    advanced_result = run_advanced_analysis(project_path)
-  File "E:\proyectos IA\CodeHunter_Analizer -0.2\CodeHunter\analyzers\advanced_diagnostics.py", line 46, in run_advanced_analysis  
-    bugs = detect_bugs(project_path)
-  File "E:\proyectos IA\CodeHunter_Analizer -0.2\CodeHunter\analyzers\bug_detector.py", line 30, in detect_bugs
-    findings.extend(analyze_file_for_bugs(file_path))
-    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: 'NoneType' object is not iterable
-(venv) PS E:\proyectos IA\CodeHunter_Analizer -0.2> 
+------
+
+
+SonarQube
+
+Semgrep
+
+Bandit
