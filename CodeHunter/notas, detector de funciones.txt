@@ -10,10 +10,10 @@ borrar venv
 rmdir .venv -Recurse -Force
 python -m venv .venv
 
-python -m pip install --upgrade pip     --Actualizar pip
-pip install rich click pylint           --Instalar dependencias del proyecto
-pip freeze > requirements.txt           --crear requirements.txt
-pip install --upgrade -r requirements.txt        --Guardar dependencias con entorno
+python -m pip install --upgrade pip               --Actualizar pip
+pip install rich click pylint                     --Instalar dependencias del proyecto
+pip freeze > requirements.txt                     --crear requirements.txt
+pip install --upgrade -r requirements.txt         --Guardar dependencias con entorno
 
 -3.13 -m venv venv                 ---cambiar version python
 
@@ -178,7 +178,10 @@ detectar duplicación entre archivos incluso si el código cambia nombres y orde
 (AST + normalización + fingerprinting).
 
 -------------
+una mejora que multiplica x5 la calidad del detector:
+detectar duplicación parcial de código (no solo funciones iguales).
 
+------------
 
 
 
