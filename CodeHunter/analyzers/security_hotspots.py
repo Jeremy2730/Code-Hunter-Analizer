@@ -11,62 +11,97 @@ from ..utils.project_walker import walk_python_files
 
 logger = logging.getLogger(__name__)
 
+class SecurityHotspotVisitor(ast.NodeVisitor):
 
-def detect_security_hotspots(project_path: str) -> List[AdvancedFinding]:
+    def __init__(self, file_path, lines):
 
-    findings = []
-    file_count = 0
+        self.file_path = file_path
+        self.lines = lines
+        self.findings = []
 
-    for file_path in walk_python_files(project_path):
+    def get_snippet(self, line):
+        if line <= len(self.lines):
+            return self.lines[line - 1].strip()
+        return ""
 
-        file_count += 1
-        if file_count % 10 == 0:
-            print(f"    📄 Procesados {file_count} archivos...")
+    def visit_Call(self, node):
 
-        findings.extend(analyze_file_for_hotspots(file_path))
+        # detect_http_without_timeout
+        if isinstance(node.func, ast.Attribute):
 
-    return findings
+            if isinstance(node.func.value, ast.Name):
+
+                if node.func.value.id == "requests":
+
+                    http_methods = ['get','post','put','delete','patch','head','options']
+
+                    if node.func.attr in http_methods:
+
+                        has_timeout = any(kw.arg == "timeout" for kw in node.keywords)
+
+                        if not has_timeout:
+
+                            self.findings.append(
+                                AdvancedFinding(
+                                    severity=Severity.MINOR,
+                                    category=Category.SECURITY_HOTSPOT,
+                                    message="Request HTTP sin timeout",
+                                    file=self.file_path,
+                                    line=node.lineno,
+                                    suggestion="Agregar timeout (ej: timeout=30).",
+                                    code_snippet=self.get_snippet(node.lineno)
+                                )
+                            )
+
+        # detect_ssl_verification_disabled
+        for keyword in node.keywords:
+
+            if keyword.arg == "verify":
+
+                if isinstance(keyword.value, ast.Constant) and keyword.value.value is False:
+
+                    self.findings.append(
+                        AdvancedFinding(
+                            severity=Severity.CRITICAL,
+                            category=Category.SECURITY_HOTSPOT,
+                            message="Verificación SSL deshabilitada",
+                            file=self.file_path,
+                            line=node.lineno,
+                            suggestion="No usar verify=False en producción.",
+                            code_snippet=self.get_snippet(node.lineno),
+                            cwe_id="CWE-295"
+                        )
+                    )
+
+        self.generic_visit(node)
+
+    def visit_Import(self, node):
+
+        for alias in node.names:
+
+            if alias.name == "random":
+
+                self.findings.append(
+                    AdvancedFinding(
+                        severity=Severity.MAJOR,
+                        category=Category.SECURITY_HOTSPOT,
+                        message="Uso de random detectado, verificar si es para seguridad",
+                        file=self.file_path,
+                        line=node.lineno,
+                        suggestion="Usar módulo secrets para tokens o crypto.",
+                        code_snippet=self.get_snippet(node.lineno)
+                    )
+                )
+
+        self.generic_visit(node)
 
 
-def analyze_file_for_hotspots(file_path: str) -> List[AdvancedFinding]:
-    """Analiza un archivo en busca de security hotspots"""
-    findings = []
+def run_hotspot_detectors(tree, file_path, lines, config):
 
-    try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            source = f.read()
-            
-            # 🛡️ Saltar archivos muy grandes
-            line_count = source.count('\n')
-            if line_count > 100000:
-                print(f"  ⚠️  Archivo muy grande ({line_count} líneas), saltando: {os.path.basename(file_path)}")
-                return findings
-            
-            tree = ast.parse(source)
-            lines = source.split('\n')
+    visitor = SecurityHotspotVisitor(file_path, lines)
+    visitor.visit(tree)
 
-    except Exception:
-        return findings
-
-    # 🔍 Ejecutar detecciones con protección
-    detectors = [
-        ("random_for_security", lambda t, f, l: detect_random_for_security(t, f, l)),
-        ("files_without_context", lambda t, f, l: detect_files_without_context(t, f, l)),
-        ("ssl_verification_disabled", lambda t, f, l: detect_ssl_verification_disabled(t, f, l)),
-        ("debug_mode", lambda t, f, l: detect_debug_mode(t, f, l, source)),
-        ("permissive_cors", lambda t, f, l: detect_permissive_cors(t, f, l, source)),
-        ("unsafe_file_permissions", lambda t, f, l: detect_unsafe_file_permissions(t, f, l)),
-        ("temp_file_usage", lambda t, f, l: detect_temp_file_usage(t, f, l)),
-        ("http_without_timeout", lambda t, f, l: detect_http_without_timeout(t, f, l)),
-    ]
-    
-    for name, detector in detectors:
-        try:
-            findings.extend(detector(tree, file_path, lines))
-        except Exception as e:
-            logger.warning(f"Detector '{name}' falló en {file_path}: {e}")
-
-    return findings
+    return visitor.findings
 
 
 def detect_random_for_security(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:

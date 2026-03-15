@@ -186,7 +186,8 @@ detectar duplicación parcial de código (no solo funciones iguales).
 Eso es una feature muy potente en análisis estático.
 
 ----------
-
+Si quieres, en el siguiente mensaje te paso un detector de dead code profesional para CodeHunter 
+(unas 60 líneas y funciona en todo el proyecto).
 
 
 
