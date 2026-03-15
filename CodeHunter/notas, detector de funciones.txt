@@ -24,6 +24,7 @@ python -m venv .venv                    --crea el entorno
 
 
 python -m CodeHunter             --para ejecutar CodeHunter
+E:\proyectos IA\CodeHunter_Analizer -0.2
 
 .\venv\Scripts\Activate.ps1           --Activar el venv
 
@@ -172,7 +173,6 @@ Un detector que encuentre funciones que retornan None accidentalmente
 
 
 SonarQube
-
 Semgrep
-
 Bandit
+Pylint

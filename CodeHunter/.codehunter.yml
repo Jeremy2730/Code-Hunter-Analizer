@@ -1,0 +1,9 @@
+analysis:
+  ignored_numbers:
+    - 0
+    - 1
+    - -1
+
+  magic_number_ignore_contexts:
+    - range
+    - len

@@ -10,6 +10,7 @@ from .bug_detector import detect_bugs
 from .vulnerability_scanner import detect_vulnerabilities
 from .code_smell_detector import detect_code_smells
 from .security_hotspots import detect_security_hotspots
+from ..core.config_loader import load_config
 
 
 # Penalizaciones para quality score
@@ -29,8 +30,15 @@ SCORE_ATTENTION_THRESHOLD = 80
 DEFAULT_SORT_WEIGHT = 99
 TOP_FILES_LIMIT = 10
 
+SEVERITY_ORDER_BLOCKER = 0
+SEVERITY_ORDER_CRITICAL = 1
+SEVERITY_ORDER_MAJOR = 2
+SEVERITY_ORDER_MINOR = 3
+SEVERITY_ORDER_INFO = 4
+
 
 def run_advanced_analysis(project_path: str) -> Dict:
+    config = load_config(project_path)
     """
     Ejecuta análisis avanzado completo del proyecto
     
@@ -43,22 +51,22 @@ def run_advanced_analysis(project_path: str) -> Dict:
     # Ejecutar todos los detectores
     print("  🐛 Detectando bugs...")
     start = time.time()
-    bugs = detect_bugs(project_path)
+    bugs = detect_bugs(project_path, config)
     print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(bugs)} bugs")
     
     print("  🔒 Escaneando vulnerabilidades...")
     start = time.time()
-    vulnerabilities = detect_vulnerabilities(project_path)
+    vulnerabilities = detect_vulnerabilities(project_path, config)
     print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(vulnerabilities)} vulnerabilidades")
     
     print("  👃 Analizando code smells...")
     start = time.time()
-    code_smells = detect_code_smells(project_path)
+    code_smells = detect_code_smells(project_path, config)
     print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(code_smells)} code smells")
     
     print("  🔥 Identificando security hotspots...")
     start = time.time()
-    hotspots = detect_security_hotspots(project_path)
+    hotspots = detect_security_hotspots(project_path, config)
     print(f"     ✅ Completado en {time.time() - start:.2f}s - {len(hotspots)} hotspots")
     
     # Combinar todos los findings
@@ -190,24 +198,24 @@ def get_findings_by_category(findings: List[AdvancedFinding], category: Category
     return [f for f in findings if f.category == category]
 
 
-def get_top_issues(findings: List[AdvancedFinding], limit: int = 10) -> List[AdvancedFinding]:
+def get_top_issues(findings: List[AdvancedFinding], limit: int = TOP_FILES_LIMIT) -> List[AdvancedFinding]:
     """
     Obtiene los issues más importantes (ordenados por severidad)
     """
-    
+
     severity_order = {
-        Severity.BLOCKER: 0,
-        Severity.CRITICAL: 1,
-        Severity.MAJOR: 2,
-        Severity.MINOR: 3,
-        Severity.INFO: 4
+        Severity.BLOCKER: SEVERITY_ORDER_BLOCKER,
+        Severity.CRITICAL: SEVERITY_ORDER_CRITICAL,
+        Severity.MAJOR: SEVERITY_ORDER_MAJOR,
+        Severity.MINOR: SEVERITY_ORDER_MINOR,
+        Severity.INFO: SEVERITY_ORDER_INFO
     }
-    
+
     sorted_findings = sorted(
         findings,
         key=lambda f: severity_order.get(f.severity, DEFAULT_SORT_WEIGHT)
     )
-    
+
     return sorted_findings[:limit]
 
 

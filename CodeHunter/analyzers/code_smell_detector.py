@@ -174,7 +174,7 @@ class GlobalAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
 
-def detect_code_smells(project_path: str) -> List[AdvancedFinding]:
+def detect_code_smells(project_path: str, config: dict):
 
     GLOBAL_FUNCTION_HASHES.clear()
 
