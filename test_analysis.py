@@ -6,12 +6,16 @@ import sys
 import time
 from CodeHunter.analyzers.advanced_diagnostics import run_advanced_analysis
 
+SEPARATOR_WIDTH = 60
+SEPARATOR_CHAR = "="
+
+
 def test_analysis(project_path: str):
     """Prueba el análisis con timeouts y debug"""
     
-    print("="*60)
+    print(SEPARATOR_CHAR * SEPARATOR_WIDTH)
     print("🔍 INICIANDO DIAGNÓSTICO")
-    print("="*60)
+    print(SEPARATOR_CHAR * SEPARATOR_WIDTH)
     print(f"Proyecto: {project_path}\n")
     
     start_total = time.time()

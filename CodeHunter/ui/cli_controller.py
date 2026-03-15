@@ -1,4 +1,4 @@
-import os
+
 from CodeHunter.ui.menu_controller import show_main_menu
 from CodeHunter.ui.project_presenter import print_project_tree
 from CodeHunter.ui.search_presenter import print_search_results
@@ -13,8 +13,7 @@ from CodeHunter.analyzers.full_report import build_full_diagnosis_data
 
 
 def clear_screen():
-    """Limpia la pantalla de la terminal"""
-    os.system("cls" if os.name == "nt" else "clear")
+    print("\033c", end="")
 
 
 def pause():

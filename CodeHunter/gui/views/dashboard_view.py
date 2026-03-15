@@ -6,6 +6,7 @@ Gauge circular de salud + contadores + descripción del proyecto + exportar PDF.
 import os
 import json
 import math
+import logging
 import urllib.request
 import threading
 import customtkinter as ctk
@@ -15,6 +16,8 @@ from ..utils import get_level as _level, get_attr as _attr
 from CodeHunter.utils.project_walker import walk_python_files
 from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
 
+
+logger = logging.getLogger(__name__)
 
 def _scan_project(path):
     """Lee el proyecto y retorna estadísticas + muestra de código."""
@@ -46,8 +49,8 @@ def _scan_project(path):
                     "file": os.path.relpath(fpath, path),
                     "code": "".join(lines[:40]),
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[ProjectScan] No se pudo leer {fpath} ({type(e).__name__}): {e}")
 
     stats["modules"] = len(stats["modules"])
     return stats, code_sample

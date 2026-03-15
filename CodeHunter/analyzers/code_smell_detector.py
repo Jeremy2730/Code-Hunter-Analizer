@@ -39,8 +39,9 @@ def structural_hash(node):
         normalizer.visit(ast.parse(ast.unparse(node)))
     )
 
-    return hashlib.md5(
-        ast.dump(node_copy, annotate_fields=False).encode()
+    return hashlib.blake2b(
+        ast.dump(node_copy, annotate_fields=False).encode(),
+        digest_size=16
     ).hexdigest()
 
 class GlobalAnalyzer(ast.NodeVisitor):

@@ -6,6 +6,9 @@ Buscador de texto en el código del proyecto.
 import os
 import threading
 import customtkinter as ctk
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SearchView(ctk.CTkFrame):
@@ -84,12 +87,12 @@ class SearchView(ctk.CTkFrame):
                                     results.append({"file": rel, "line": lineno, "content": line.rstrip()})
                                     if len(results) >= 200:
                                         break
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"[SearchView] No se pudo leer {fpath} ({type(e).__name__}): {e}")
                 if len(results) >= 200:
                     break
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[SearchView] No se pudo leer {fpath} ({type(e).__name__}): {e}")
 
         self.after(0, lambda: self._render_results(query, results))
 

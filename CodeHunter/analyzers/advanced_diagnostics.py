@@ -12,6 +12,24 @@ from .code_smell_detector import detect_code_smells
 from .security_hotspots import detect_security_hotspots
 
 
+# Penalizaciones para quality score
+PENALTY_BLOCKER = 25
+PENALTY_CRITICAL = 15
+PENALTY_MAJOR = 5
+PENALTY_MINOR = 2
+PENALTY_INFO = 0.5
+
+# Umbrales de estado
+MAX_VULNERABILITIES_CRITICAL = 3
+MAX_CRITICAL_WARNINGS = 5
+SCORE_WARNING_THRESHOLD = 50
+SCORE_ATTENTION_THRESHOLD = 80
+
+# Otros valores
+DEFAULT_SORT_WEIGHT = 99
+TOP_FILES_LIMIT = 10
+
+
 def run_advanced_analysis(project_path: str) -> Dict:
     """
     Ejecuta análisis avanzado completo del proyecto
@@ -126,11 +144,11 @@ def calculate_quality_score(metrics: Dict) -> int:
     
     score = 100
     
-    score -= metrics["blocker"] * 25
-    score -= metrics["critical"] * 15
-    score -= metrics["major"] * 5
-    score -= metrics["minor"] * 2
-    score -= metrics["info"] * 0.5
+    score -= metrics["blocker"] * PENALTY_BLOCKER
+    score -= metrics["critical"] * PENALTY_CRITICAL
+    score -= metrics["major"] * PENALTY_MAJOR
+    score -= metrics["minor"] * PENALTY_MINOR
+    score -= metrics["info"] * PENALTY_INFO
     
     # No puede ser negativo
     score = max(score, 0)
@@ -147,15 +165,15 @@ def determine_status(metrics: Dict) -> str:
     vulnerabilities = metrics["vulnerabilities"]
     
     # Blocker o vulnerabilidades críticas = estado crítico
-    if blocker > 0 or vulnerabilities > 3:
+    if blocker > 0 or vulnerabilities > MAX_VULNERABILITIES_CRITICAL:
         return "CRITICAL"
     
     # Score bajo o muchos críticos = warning
-    if score < 50 or critical > 5:
+    if score < SCORE_WARNING_THRESHOLD or critical > MAX_CRITICAL_WARNINGS:
         return "WARNING"
     
     # Score medio = needs attention
-    if score < 80:
+    if score < SCORE_ATTENTION_THRESHOLD:
         return "NEEDS_ATTENTION"
     
     # Todo bien
@@ -187,7 +205,7 @@ def get_top_issues(findings: List[AdvancedFinding], limit: int = 10) -> List[Adv
     
     sorted_findings = sorted(
         findings,
-        key=lambda f: severity_order.get(f.severity, 99)
+        key=lambda f: severity_order.get(f.severity, DEFAULT_SORT_WEIGHT)
     )
     
     return sorted_findings[:limit]
@@ -209,4 +227,4 @@ def get_files_with_most_issues(findings: List[AdvancedFinding]) -> Dict[str, int
         reverse=True
     )
     
-    return dict(sorted_files[:10])  # Top 10
+    return dict(sorted_files[:TOP_FILES_LIMIT])  # Top 10

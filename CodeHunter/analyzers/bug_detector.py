@@ -7,28 +7,29 @@ import logging
 import os
 from typing import List
 from ..core.models import AdvancedFinding, Severity, Category
-from ..utils.project_walker import walk_project
+from ..utils.project_walker import walk_python_files
+
+
+
+MAX_FILE_LINES = 100000
+MAX_AST_DEPTH = 200
 
 
 def detect_bugs(project_path: str) -> List[AdvancedFinding]:
     """Detecta bugs lógicos en el proyecto"""
+
     findings = []
     file_count = 0
-    
-    for root, files in walk_project(project_path):
-        for file in files:
-            if not file.endswith(".py"):
-                continue
-            
-            file_count += 1
-            if file_count % 10 == 0:
-                print(f"    📄 Procesados {file_count} archivos...")
 
-            file_path = os.path.join(root, file)
-            findings.extend(analyze_file_for_bugs(file_path))
+    for file_path in walk_python_files(project_path):
+
+        file_count += 1
+        if file_count % 10 == 0:
+            print(f"    📄 Procesados {file_count} archivos...")
+
+        findings.extend(analyze_file_for_bugs(file_path))
 
     return findings
-
 
 def analyze_file_for_bugs(file_path: str) -> List[AdvancedFinding]:
     """Analiza un archivo en busca de bugs"""
@@ -40,7 +41,7 @@ def analyze_file_for_bugs(file_path: str) -> List[AdvancedFinding]:
             
             # 🛡️ Saltar archivos muy grandes (>100k líneas)
             line_count = source.count('\n')
-            if line_count > 100000:
+            if line_count > MAX_FILE_LINES:
                 print(f"  ⚠️  Archivo muy grande ({line_count} líneas), saltando: {os.path.basename(file_path)}")
                 return findings
             
@@ -48,9 +49,8 @@ def analyze_file_for_bugs(file_path: str) -> List[AdvancedFinding]:
             lines = source.split('\n')
 
     except Exception as e:
-        logging.warning(
-            f"Detector {name} falló en {os.path.basename(file_path)}: {e}"
-        )
+        logging.warning(f"Error analizando {os.path.basename(file_path)}: {e}")
+
 
     # 🔍 Ejecutar detecciones con protección individual
     detectors = [
@@ -62,17 +62,20 @@ def analyze_file_for_bugs(file_path: str) -> List[AdvancedFinding]:
         ("mutable_default_args", detect_mutable_default_args),
     ]
     
-    for name, detector in detectors:
-        try:
-            findings.extend(detector(tree, file_path, lines))
-        except RecursionError:
-            print(f"⚠️ RecursionError en {name} para {os.path.basename(file_path)}")
-        except Exception as e:
-            logging.warning(
-                f"Detector {name} falló en {os.path.basename(file_path)}: {e}"
-            )
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            source = f.read()
 
-    return findings
+            line_count = source.count('\n')
+            if line_count > MAX_FILE_LINES:
+                return findings
+
+            tree = ast.parse(source)
+            lines = source.split('\n')
+
+    except Exception as e:
+        logging.warning(f"Error analizando {os.path.basename(file_path)}: {e}")
+        return findings
 
 
 def detect_except_pass(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
@@ -107,7 +110,7 @@ def detect_unused_variables(tree: ast.AST, file_path: str, lines: List[str]) -> 
             self.assigned = {}
             self.used = set()
             self.depth = 0
-            self.max_depth = 200  # 🛡️ Límite de recursión
+            self.max_depth = MAX_AST_DEPTH # 🛡️ Límite de recursión
 
         def visit(self, node):
             self.depth += 1
@@ -129,19 +132,19 @@ def detect_unused_variables(tree: ast.AST, file_path: str, lines: List[str]) -> 
                 self.used.add(node.id)
             self.generic_visit(node)
 
+    analyzer = VariableAnalyzer()
+
     try:
-        analyzer = VariableAnalyzer()
         analyzer.visit(tree)
     except RecursionError:
         return findings
 
-    # Variables asignadas pero no usadas (solo reportar las más importantes)
     for var_name, line_num in analyzer.assigned.items():
+
         if var_name not in analyzer.used and not var_name.startswith('_'):
-            # Ignorar variables comunes en enums
             if var_name.isupper():
                 continue
-                
+                    
             snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
 
             findings.append(AdvancedFinding(
@@ -153,11 +156,6 @@ def detect_unused_variables(tree: ast.AST, file_path: str, lines: List[str]) -> 
                 suggestion=f"Eliminar la variable '{var_name}' si no es necesaria, o usar _ para indicar que es intencional.",
                 code_snippet=snippet
             ))
-    try:
-        analyzer = VariableAnalyzer()
-        analyzer.visit(tree)
-    except RecursionError:
-        pass
 
     return findings
 
@@ -243,7 +241,7 @@ def detect_missing_return(tree: ast.AST, file_path: str, lines: List[str]) -> Li
         def __init__(self):
             self.findings = []
             self.depth = 0
-            self.max_depth = 200
+            self.max_depth = MAX_AST_DEPTH
 
         def visit(self, node):
             self.depth += 1

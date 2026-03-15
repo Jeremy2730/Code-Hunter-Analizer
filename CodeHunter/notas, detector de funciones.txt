@@ -80,14 +80,16 @@ crear python y ejecutar
 
 
 
+ideas de mejoras
 
-
+------------------------
 🔥 mejoras nivel herramienta profesional
 
 1️⃣ barra de progreso real del análisis
 2️⃣ análisis paralelo (multiprocessing) → 5-10x más rápido
 3️⃣ cache de AST → escanea proyectos gigantes rápido
 4️⃣ detector de funciones duplicadas
+---------------------
 
 🔥 Detector de funciones duplicadas
 
@@ -106,11 +108,11 @@ Si quieres,
 en el siguiente paso te paso el algoritmo profesional 
 para detectar funciones duplicadas usando AST + hash estructural.
 
-
+-------------------------
 🔥 detección de complejidad ciclomática (McCabe Complexity)
 
 
-
+------------------
 🧠 Detector de complejidad ciclomática
 
 Detecta funciones como:
@@ -124,3 +126,48 @@ and/or
 y calcula:
 
 Complexity Score
+------------------
+
+-detectar funciones con retorno inconsistente,
+-------------------
+
+-cómo crear una carpeta de pruebas para analizadores
+----------------------
+
+⚡ Crear un archivo bad_code_samples.py con 10 ejemplos clásicos de code smells para probar CodeHunter automáticamente.
+-------------------
+
+-test_smells_examples.py
+donde ponen código mal hecho a propósito para verificar que el analizador lo detecte.
+-------------
+
+⚡ detectar subprocess.run(..., input=user_input)
+⚡ detectar requests.get(url + user_input)
+
+Eso haría que tu Vulnerability Scanner suba muchísimo de nivel.
+
+-------------------
+Si quieres, te puedo mostrar una mejora brutal para tu SearchView que 
+hace que la búsqueda sea 10-30× más rápida en proyectos grandes (tipo repos de 10k archivos).
+
+-------------
+Si quieres, también puedo mostrarte una mejora muy potente para tu detector de duplicados 
+que lo hace 10× más preciso que el hashing actual (detecta funciones duplicadas incluso 
+si cambian el orden de variables). Es una técnica usada en analizadores industriales.
+
+------------
+hay un pequeño bug de arquitectura en advanced_diagnostics.py que podría hacer que el análisis sea 30-40% más lento de lo necesario. Es fácil de arreglar.
+
+---------------
+cómo hacer que tu analizador detecte dead code real (funciones nunca usadas en todo el proyecto).
+Eso ya es nivel analizador profesional serio y encaja perfecto con tu proyecto.
+
+----------------
+FUNCIONES DEFINIDAS PERO NUNCA USADAS
+(dead code detection)
+
+--------------
+hacer que el proyecto se analice 2-4 veces más rápido usando paralelización del análisis de archivos 
+(algo que usan los analizadores profesionales). Es una mejora relativamente corta pero muy poderosa.
+
+

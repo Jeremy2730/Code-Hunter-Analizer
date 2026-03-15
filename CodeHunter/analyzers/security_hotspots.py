@@ -3,10 +3,13 @@ Security Hotspots - Identifica código sensible que requiere revisión manual
 """
 
 import ast
+import logging
 from typing import List
 from ..core.models import AdvancedFinding, Severity, Category
 from ..utils.project_walker import walk_project
 import os
+
+logger = logging.getLogger(__name__)
 
 
 def detect_security_hotspots(project_path: str) -> List[AdvancedFinding]:
@@ -64,8 +67,8 @@ def analyze_file_for_hotspots(file_path: str) -> List[AdvancedFinding]:
     for name, detector in detectors:
         try:
             findings.extend(detector(tree, file_path, lines))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Detector '{name}' falló en {file_path}: {e}")
 
     return findings
 
@@ -161,8 +164,10 @@ def detect_files_without_context(tree: ast.AST, file_path: str, lines: List[str]
         detector = FileOpenDetector()
         detector.visit(tree)
         findings.extend(detector.findings)
+
     except RecursionError:
-        pass
+        logger.warning(f"RecursionError en detect_files_without_context: {file_path}")
+        return findings
 
     return findings
 
