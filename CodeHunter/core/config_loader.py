@@ -4,15 +4,14 @@ from pathlib import Path
 
 DEFAULT_CONFIG = {
     "analysis": {
-        "ignored_numbers": [0, 1, -1],
-        "magic_number_ignore_contexts": ["range", "len"]
+        "ignored_numbers": [0, 1, -1]
     }
 }
 
 
 def load_config(project_path: str) -> dict:
     """
-    Carga .codehunter.yml si existe
+    Carga el archivo .codehunter.yml si existe
     """
 
     config_path = Path(project_path) / ".codehunter.yml"
@@ -35,7 +34,7 @@ def load_config(project_path: str) -> dict:
 
 def merge_configs(default: dict, user: dict) -> dict:
     """
-    Mezcla config por defecto con config del usuario
+    Mezcla configuración por defecto con la del usuario
     """
 
     result = default.copy()

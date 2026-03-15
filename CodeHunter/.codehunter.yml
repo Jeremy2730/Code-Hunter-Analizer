@@ -7,3 +7,6 @@ analysis:
   magic_number_ignore_contexts:
     - range
     - len
+
+  ignored_numbers = set(self.config["analysis"]["ignored_numbers"])
+  ignored_numbers.update({2, 10, 100})  

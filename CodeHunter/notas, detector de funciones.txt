@@ -170,6 +170,18 @@ hacer que el proyecto se analice 2-4 veces más rápido usando paralelización d
 Un detector que encuentre funciones que retornan None accidentalmente
 
 ------
+hacer que tu detector de números mágicos entienda el contexto AST y no marque cosas como:
+for i in range(10)
+
+--------
+detectar duplicación entre archivos incluso si el código cambia nombres y orden de variables 
+(AST + normalización + fingerprinting).
+
+-------------
+
+
+
+
 
 
 SonarQube

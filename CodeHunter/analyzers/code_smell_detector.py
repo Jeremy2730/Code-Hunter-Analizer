@@ -9,6 +9,7 @@ from typing import List
 from ..core.models import AdvancedFinding, Severity, Category
 from ..utils.project_walker import walk_python_files
 
+
 logger = logging.getLogger(__name__)
 
 # Registro global de hashes de funciones (para detectar duplicados entre archivos)
@@ -45,10 +46,11 @@ def structural_hash(node):
 
 class GlobalAnalyzer(ast.NodeVisitor):
 
-    def __init__(self, file_path, lines, findings):
+    def __init__(self, file_path, lines, findings, config):
         self.file_path = file_path
         self.lines = lines
         self.findings = findings
+        self.config = config
 
     def visit_FunctionDef(self, node):
 
@@ -94,6 +96,8 @@ class GlobalAnalyzer(ast.NodeVisitor):
 
         # AST HASHING (duplicados)
         func_hash = structural_hash(node)
+        if len(node.body) > 200:
+            return
 
         if func_hash in GLOBAL_FUNCTION_HASHES:
 
@@ -151,11 +155,11 @@ class GlobalAnalyzer(ast.NodeVisitor):
 
     def visit_Constant(self, node):
 
-        allowed = {0,1,-1,2,10,100,1000}
+        ignored_numbers = set(self.config["analysis"]["ignored_numbers"])
 
-        if isinstance(node.value,(int,float)):
+        if isinstance(node.value, (int, float)):
 
-            if node.value not in allowed:
+            if node.value not in ignored_numbers:
 
                 snippet = self.lines[node.lineno-1].strip()
 
@@ -173,7 +177,6 @@ class GlobalAnalyzer(ast.NodeVisitor):
 
         self.generic_visit(node)
 
-
 def detect_code_smells(project_path: str, config: dict):
 
     GLOBAL_FUNCTION_HASHES.clear()
@@ -187,12 +190,12 @@ def detect_code_smells(project_path: str, config: dict):
         if file_count % 10 == 0:
             print(f"    📄 Procesados {file_count} archivos...")
 
-        findings.extend(analyze_file_for_smells(file_path))
+        findings.extend(analyze_file_for_smells(file_path, config))
 
     return findings
 
 
-def analyze_file_for_smells(file_path: str) -> List[AdvancedFinding]:
+def analyze_file_for_smells(file_path: str, config: dict):
     """Analiza un archivo en busca de code smells"""
     findings = []
 
@@ -214,69 +217,12 @@ def analyze_file_for_smells(file_path: str) -> List[AdvancedFinding]:
     
     # 🚀 Nuevo análisis optimizado (1 sola pasada del AST)
 
-    analyzer = GlobalAnalyzer(file_path, lines, findings)
+    analyzer = GlobalAnalyzer(file_path, lines, findings, config)
 
     try:
         analyzer.visit(tree)
     except RecursionError:
         print(f"⚠️ RecursionError analizando {os.path.basename(file_path)}")
-
-    return findings
-
-def detect_long_functions(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
-    """Detecta funciones muy largas (más de 50 líneas)"""
-    findings = []
-
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            start_line = node.lineno
-            end_line = node.end_lineno if hasattr(node, 'end_lineno') else start_line
-            func_length = end_line - start_line + 1
-
-            if func_length > 50:
-                snippet = lines[start_line - 1].strip() if start_line <= len(lines) else ""
-                severity = Severity.MAJOR if func_length > 100 else Severity.MINOR
-
-                findings.append(AdvancedFinding(
-                    severity=severity,
-                    category=Category.CODE_SMELL,
-                    message=f"Función '{node.name}' muy larga ({func_length} líneas)",
-                    file=file_path,
-                    line=start_line,
-                    suggestion="Dividir en funciones más pequeñas. Una función debería hacer una sola cosa.",
-                    code_snippet=snippet
-                ))
-
-    return findings
-
-
-def detect_too_many_parameters(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
-    """Detecta funciones con demasiados parámetros (más de 5)"""
-    findings = []
-
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            num_params = len(node.args.args)
-            
-            if num_params > 0:
-                first_param = node.args.args[0].arg
-                if first_param in ['self', 'cls']:
-                    num_params -= 1
-
-            if num_params > 5:
-                line_num = node.lineno
-                snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
-                severity = Severity.MAJOR if num_params > 7 else Severity.MINOR
-
-                findings.append(AdvancedFinding(
-                    severity=severity,
-                    category=Category.CODE_SMELL,
-                    message=f"Función '{node.name}' tiene demasiados parámetros ({num_params})",
-                    file=file_path,
-                    line=line_num,
-                    suggestion="Considerar agrupar parámetros relacionados en un objeto o diccionario.",
-                    code_snippet=snippet
-                ))
 
     return findings
 
@@ -356,33 +302,6 @@ def detect_deep_nesting(tree: ast.AST, file_path: str, lines: List[str]) -> List
     return findings
 
 
-def detect_god_classes(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
-    """Detecta clases con demasiados métodos (más de 20)"""
-    findings = []
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef):
-            methods = [n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-            num_methods = len(methods)
-
-            if num_methods > 20:
-                line_num = node.lineno
-                snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
-                severity = Severity.MAJOR if num_methods > 30 else Severity.MINOR
-
-                findings.append(AdvancedFinding(
-                    severity=severity,
-                    category=Category.CODE_SMELL,
-                    message=f"Clase '{node.name}' tiene demasiados métodos ({num_methods}) - God Class",
-                    file=file_path,
-                    line=line_num,
-                    suggestion="Dividir la clase en clases más pequeñas con responsabilidades específicas (SRP).",
-                    code_snippet=snippet
-                ))
-
-    return findings
-
-
 def detect_poor_naming(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
     """Detecta nombres de variables poco descriptivos"""
     findings = []
@@ -453,64 +372,6 @@ def detect_poor_naming(tree: ast.AST, file_path: str, lines: List[str]) -> List[
     return findings
 
 
-def detect_magic_numbers(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
-    """Detecta números mágicos (constantes sin nombre)"""
-    findings = []
-    allowed_numbers = {0, 1, -1, 2, 10, 100, 1000}
-
-    class MagicNumberDetector(ast.NodeVisitor):
-        def __init__(self):
-            self.findings = []
-            self.in_constant = False
-            self.depth = 0
-            self.max_depth = 200
-
-        def visit(self, node):
-            self.depth += 1
-            if self.depth > self.max_depth:
-                return
-            try:
-                super().visit(node)
-            finally:
-                self.depth -= 1
-
-        def visit_Assign(self, node):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id.isupper():
-                    self.in_constant = True
-                    self.generic_visit(node)
-                    self.in_constant = False
-                    return
-            self.generic_visit(node)
-
-        def visit_Constant(self, node):
-            if isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
-                if node.value not in allowed_numbers and not self.in_constant:
-                    line_num = node.lineno
-                    snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
-
-                    self.findings.append(AdvancedFinding(
-                        severity=Severity.MINOR,
-                        category=Category.CODE_SMELL,
-                        message=f"Número mágico: {node.value}",
-                        file=file_path,
-                        line=line_num,
-                        suggestion="Definir como constante con nombre descriptivo (ej: MAX_RETRIES = 3).",
-                        code_snippet=snippet
-                    ))
-            
-            self.generic_visit(node)
-
-    try:
-        detector = MagicNumberDetector()
-        detector.visit(tree)
-        findings.extend(detector.findings)
-    except RecursionError:
-        logger.warning(f"RecursionError en detect_magic_numbers analizando {file_path}")
-
-    return findings
-
-
 def detect_long_parameter_list(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
     """Detecta llamadas a funciones con muchos argumentos posicionales"""
     findings = []
@@ -535,42 +396,3 @@ def detect_long_parameter_list(tree: ast.AST, file_path: str, lines: List[str]) 
 
     return findings
 
-
-def detect_duplicate_code(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
-    """Detecta bloques de código potencialmente duplicados"""
-    findings = []
-    functions = []
-    
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            start = node.lineno
-            end = node.end_lineno if hasattr(node, 'end_lineno') else start
-            length = end - start
-            
-            functions.append({
-                'name': node.name,
-                'start': start,
-                'end': end,
-                'length': length,
-                'num_statements': len(node.body)
-            })
-
-    for i, func1 in enumerate(functions):
-        for func2 in functions[i+1:]:
-            if (abs(func1['length'] - func2['length']) <= 2 and 
-                func1['num_statements'] == func2['num_statements'] and
-                func1['length'] > 10):
-                
-                snippet = lines[func1['start'] - 1].strip() if func1['start'] <= len(lines) else ""
-
-                findings.append(AdvancedFinding(
-                    severity=Severity.MINOR,
-                    category=Category.CODE_SMELL,
-                    message=f"Posible código duplicado entre '{func1['name']}' y '{func2['name']}'",
-                    file=file_path,
-                    line=func1['start'],
-                    suggestion="Extraer código común a una función auxiliar.",
-                    code_snippet=snippet
-                ))
-
-    return findings
