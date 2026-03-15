@@ -23,18 +23,13 @@ ls .venv\Scripts
 python -m venv .venv                    --crea el entorno
 
 
-
-librerias:
-
-pip install pandas
-
-python -m CodeHunter             /para ejecutar CodeHunter
+python -m CodeHunter             --para ejecutar CodeHunter
 
 .\venv\Scripts\Activate.ps1           --Activar el venv
 
-python -m CodeHunter.main_gui          ejecutar la gui
+python -m CodeHunter.main_gui          --ejecutar la gui
 
-python -m compileall CodeHunter    mirar si compila el proyecto
+python -m compileall CodeHunter    --mirar si compila el proyecto
 
 C:\Users\ADMIN\Downloads\CodeHunter_Analizer -0.2
 

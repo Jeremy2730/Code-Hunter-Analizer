@@ -13,7 +13,7 @@ IGNORE_DIRS = {
     ".git", ".hg", ".svn",
     "__pycache__", ".mypy_cache", ".ruff_cache", ".pytest_cache", ".hypothesis",
     "build", "dist", ".eggs", "site-packages",
-    "node_modules", ".tox", "cache", "memory", "recall",
+    "node_modules", ".tox", "cache", "memory", "recall", "migrations", "generated"
 }
 
 IGNORE_FILE_PATTERNS = (

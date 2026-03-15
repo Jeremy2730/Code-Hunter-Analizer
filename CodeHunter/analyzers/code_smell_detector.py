@@ -1,14 +1,13 @@
 """
 Code Smell Detector - Detecta problemas de diseño y mantenibilidad
 """
-
-import ast
-from typing import List
-from ..core.models import AdvancedFinding, Severity, Category
-from ..utils.project_walker import walk_project
 import os
 import hashlib
 import logging
+import ast
+from typing import List
+from ..core.models import AdvancedFinding, Severity, Category
+from ..utils.project_walker import walk_python_files
 
 logger = logging.getLogger(__name__)
 
@@ -176,24 +175,19 @@ class GlobalAnalyzer(ast.NodeVisitor):
 
 
 def detect_code_smells(project_path: str) -> List[AdvancedFinding]:
-    """Detecta code smells en el proyecto"""
 
-    GLOBAL_FUNCTION_HASHES.clear()   # ← limpiar registro global
+    GLOBAL_FUNCTION_HASHES.clear()
 
     findings = []
     file_count = 0
 
-    for root, files in walk_project(project_path):
-        for file in files:
-            if not file.endswith(".py"):
-                continue
-            
-            file_count += 1
-            if file_count % 10 == 0:
-                print(f"    📄 Procesados {file_count} archivos...")
+    for file_path in walk_python_files(project_path):
 
-            file_path = os.path.join(root, file)
-            findings.extend(analyze_file_for_smells(file_path))
+        file_count += 1
+        if file_count % 10 == 0:
+            print(f"    📄 Procesados {file_count} archivos...")
+
+        findings.extend(analyze_file_for_smells(file_path))
 
     return findings
 

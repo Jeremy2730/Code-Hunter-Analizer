@@ -2,32 +2,28 @@
 Security Hotspots - Identifica código sensible que requiere revisión manual
 """
 
+import os
 import ast
 import logging
 from typing import List
 from ..core.models import AdvancedFinding, Severity, Category
-from ..utils.project_walker import walk_project
-import os
+from ..utils.project_walker import walk_python_files
 
 logger = logging.getLogger(__name__)
 
 
 def detect_security_hotspots(project_path: str) -> List[AdvancedFinding]:
-    """Detecta security hotspots en el proyecto"""
+
     findings = []
     file_count = 0
 
-    for root, files in walk_project(project_path):
-        for file in files:
-            if not file.endswith(".py"):
-                continue
-            
-            file_count += 1
-            if file_count % 10 == 0:
-                print(f"    📄 Procesados {file_count} archivos...")
+    for file_path in walk_python_files(project_path):
 
-            file_path = os.path.join(root, file)
-            findings.extend(analyze_file_for_hotspots(file_path))
+        file_count += 1
+        if file_count % 10 == 0:
+            print(f"    📄 Procesados {file_count} archivos...")
+
+        findings.extend(analyze_file_for_hotspots(file_path))
 
     return findings
 
