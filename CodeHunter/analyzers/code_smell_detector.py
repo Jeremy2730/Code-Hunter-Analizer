@@ -95,9 +95,10 @@ class GlobalAnalyzer(ast.NodeVisitor):
             )
 
         # AST HASHING (duplicados)
-        func_hash = structural_hash(node)
         if len(node.body) > 200:
             return
+        func_hash = structural_hash(node)
+
 
         if func_hash in GLOBAL_FUNCTION_HASHES:
 
@@ -155,7 +156,9 @@ class GlobalAnalyzer(ast.NodeVisitor):
 
     def visit_Constant(self, node):
 
-        ignored_numbers = set(self.config["analysis"]["ignored_numbers"])
+        ignored_numbers = set(
+            self.config.get("analysis", {}).get("ignored_numbers", [])
+        )
 
         if isinstance(node.value, (int, float)):
 
@@ -221,6 +224,10 @@ def analyze_file_for_smells(file_path: str, config: dict):
 
     try:
         analyzer.visit(tree)
+
+        findings.extend(detect_deep_nesting(tree, file_path, lines))
+        findings.extend(detect_poor_naming(tree, file_path, lines))
+        findings.extend(detect_long_parameter_list(tree, file_path, lines))
     except RecursionError:
         print(f"⚠️ RecursionError analizando {os.path.basename(file_path)}")
 
