@@ -36,6 +36,25 @@ python -m CodeHunter             /para ejecutar CodeHunter
 
 python -m CodeHunter.main_gui          ejecutar la gui
 
+************************************************************************
+git checkout base_estable_v1      ----- proyecto estable
+git checkout v1.0-estable
+
+git checkout -b nueva_feature     -----para experimentos
+
+git tag -a v1.1 -m "Mejora en análisis"      -------cuando funcione bien
+git push origin v1.1
+*************************************************************************
+
+----------------------------------------------------------------------
+git checkout -b refactor_core_v1        -----empezar el experimento
+
+git add .                                   ---guardar cambios
+git commit -m "refactor: constants"
+
+git tag -a v1.1 -m "refactor estable"       ----cuando todo funcione bien
+git push origin v1.1
+--------------------------------------------------------------------------
 
 C:\Users\ADMIN\Downloads\CodeHunter_Analizer -0.2
 
