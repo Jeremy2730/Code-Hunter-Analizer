@@ -7,38 +7,52 @@ from .advanced_diagnostics import run_advanced_analysis
 from .file_analyzer import detect_empty_python_files, detect_empty_folders
 from .circular_imports import detect_circular_imports
 from ..core.models import Finding, AdvancedFinding, Severity, Category
+from CodeHunter.core.engine import AnalysisEngine
+
 
 
 def run_code_doctor(project_path: str) -> dict:
     """
     Ejecuta diagnóstico completo del sistema
-    Combina análisis legacy y avanzado
+    Combina análisis avanzado, engine y legacy
     """
-    
+
     print("\n🩺 Ejecutando Code Doctor...")
     print("="*60)
-    
+
     # ═══════════════════════════════════════════════════════════
-    # ANÁLISIS AVANZADO (nuevo)
+    # 🔍 ENGINE (nuevo cerebro)
     # ═══════════════════════════════════════════════════════════
+
+    engine = AnalysisEngine()
+
+    try:
+        # ⚠️ OJO: engine espera archivos, no path
+        from CodeHunter.utils.project_walker import get_python_files
+        files = get_python_files(project_path)
+
+        engine_findings = engine.run(files)
+    except Exception as e:
+        print(f"⚠️ Error en engine: {e}")
+        engine_findings = []
+
+    # ═══════════════════════════════════════════════════════════
+    # 🔬 ANÁLISIS AVANZADO (ya existente)
+    # ═══════════════════════════════════════════════════════════
+
     advanced_result = run_advanced_analysis(project_path)
     advanced_findings = advanced_result["findings"]
-    metrics = advanced_result["metrics"]
-    
+
     # ═══════════════════════════════════════════════════════════
-    # ANÁLISIS LEGACY (compatibilidad con código existente)
+    # 🧩 ANÁLISIS LEGACY
     # ═══════════════════════════════════════════════════════════
-    
-    # Archivos vacíos
+
     empty_files = detect_empty_python_files(project_path)
     empty_folders = detect_empty_folders(project_path)
-    
-    # Dependencias circulares
     cycles = detect_circular_imports(project_path)
-    
-    # Convertir findings legacy a AdvancedFinding
+
     legacy_findings = []
-    
+
     for finding in empty_files + empty_folders:
         legacy_findings.append(AdvancedFinding(
             severity=Severity.MINOR if "vacío" in finding.message else Severity.MAJOR,
@@ -48,7 +62,7 @@ def run_code_doctor(project_path: str) -> dict:
             line=finding.line,
             suggestion=finding.suggestion
         ))
-    
+
     for cycle in cycles:
         legacy_findings.append(AdvancedFinding(
             severity=Severity.CRITICAL,
@@ -59,45 +73,40 @@ def run_code_doctor(project_path: str) -> dict:
             suggestion="Reorganizar imports para eliminar la dependencia circular.",
             cwe_id="CWE-1047"
         ))
-    
-    # Combinar findings avanzados y legacy
-    all_advanced_findings = advanced_findings + legacy_findings
-    
-    # Recalcular métricas con todos los findings
+
+    # ═══════════════════════════════════════════════════════════
+    # 🔥 UNIFICACIÓN TOTAL
+    # ═══════════════════════════════════════════════════════════
+
+    all_advanced_findings = (
+        advanced_findings +
+        legacy_findings +
+        engine_findings
+    )
+
+    # ═══════════════════════════════════════════════════════════
+    # 📊 MÉTRICAS
+    # ═══════════════════════════════════════════════════════════
+
     final_metrics = calculate_final_metrics(all_advanced_findings)
-    
+
     # ═══════════════════════════════════════════════════════════
-    # CONVERSIÓN A FORMATO LEGACY (para compatibilidad)
+    # 🔄 CONVERSIÓN LEGACY
     # ═══════════════════════════════════════════════════════════
-    
+
     legacy_findings_list = convert_to_legacy_findings(all_advanced_findings)
-    
+
     return {
-        # Formato legacy (para compatibilidad)
         "findings": legacy_findings_list,
         "critical": final_metrics["blocker"] + final_metrics["critical"],
         "warnings": final_metrics["major"],
         "info": final_metrics["minor"] + final_metrics["info"],
         "score": final_metrics["quality_score"],
         "status": final_metrics["status"],
-        
-        # Formato avanzado (nuevo)
+
+        # avanzado
         "advanced_findings": all_advanced_findings,
-        "metrics": final_metrics,
-        "by_severity": {
-            "blocker": final_metrics["blocker"],
-            "critical": final_metrics["critical"],
-            "major": final_metrics["major"],
-            "minor": final_metrics["minor"],
-            "info": final_metrics["info"]
-        },
-        "by_category": {
-            "bugs": final_metrics["bugs"],
-            "vulnerabilities": final_metrics["vulnerabilities"],
-            "code_smells": final_metrics["code_smells"],
-            "security_hotspots": final_metrics["security_hotspots"],
-            "maintainability": final_metrics["maintainability"]
-        }
+        "metrics": final_metrics
     }
 
 
