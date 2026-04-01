@@ -19,29 +19,22 @@ from CodeHunter.analyzers.vulnerability_scanner import detect_vulnerabilities
 class AnalysisEngine:
     """Motor principal de análisis"""
 
+    def __init__(self):
+        self.analyzers = [
+            detect_bugs,
+            detect_code_smells,
+            detect_vulnerabilities,
+            detect_code_smells
+        ]
+
     def run(self, files):
-        """
-        Ejecuta todos los análisis sobre una lista de archivos
-
-        :param files: lista de rutas de archivos
-        :return: lista de hallazgos
-        """
-
         findings = []
 
-        try:
-            findings.extend(detect_bugs(files))
-        except Exception as e:
-            print(f"⚠️ Error en bugs: {e}")
-
-        try:
-            findings.extend(detect_code_smells(files))
-        except Exception as e:
-            print(f"⚠️ Error en code smells: {e}")
-
-        try:
-            findings.extend(detect_vulnerabilities(files))
-        except Exception as e:
-            print(f"⚠️ Error en vulnerabilidades: {e}")
+        for file in files:
+            for analyzer in self.analyzers:
+                try:
+                    findings.extend(analyzer(file))
+                except Exception as e:
+                    print(f"⚠️ Error en {analyzer.__name__}: {e}")
 
         return findings

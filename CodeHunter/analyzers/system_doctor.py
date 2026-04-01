@@ -1,155 +1,94 @@
 """
 System Doctor - Diagnóstico completo del sistema
-Usa análisis avanzado con categorización profesional
+
+Arquitectura:
+- Engine: ejecuta analyzers (cerebro)
+- Walker: obtiene archivos
+- Doctor: orquesta + métricas + compatibilidad legacy
 """
 
-from .advanced_diagnostics import run_advanced_analysis
-from .file_analyzer import detect_empty_python_files, detect_empty_folders
-from .circular_imports import detect_circular_imports
-from ..core.models import Finding, AdvancedFinding, Severity, Category
 from CodeHunter.core.engine import AnalysisEngine
-
+from CodeHunter.utils.project_walker import walk_python_files
+from CodeHunter.core.models import Finding, Severity, Category
 
 
 def run_code_doctor(project_path: str) -> dict:
     """
-    Ejecuta diagnóstico completo del sistema
-    Combina análisis avanzado, engine y legacy
+    Punto de entrada principal del análisis
     """
 
     print("\n🩺 Ejecutando Code Doctor...")
-    print("="*60)
+    print("=" * 60)
 
-    # ═══════════════════════════════════════════════════════════
-    # 🔍 ENGINE (nuevo cerebro)
-    # ═══════════════════════════════════════════════════════════
+    # 🔍 Obtener archivos
+    files = list(walk_python_files(project_path))
 
+    # 🧠 Ejecutar engine
     engine = AnalysisEngine()
+    findings = engine.run(files)
 
-    try:
-        # ⚠️ OJO: engine espera archivos, no path
-        from CodeHunter.utils.project_walker import get_python_files
-        files = get_python_files(project_path)
-
-        engine_findings = engine.run(files)
-    except Exception as e:
-        print(f"⚠️ Error en engine: {e}")
-        engine_findings = []
-
-    # ═══════════════════════════════════════════════════════════
-    # 🔬 ANÁLISIS AVANZADO (ya existente)
-    # ═══════════════════════════════════════════════════════════
-
-    advanced_result = run_advanced_analysis(project_path)
-    advanced_findings = advanced_result["findings"]
-
-    # ═══════════════════════════════════════════════════════════
-    # 🧩 ANÁLISIS LEGACY
-    # ═══════════════════════════════════════════════════════════
-
-    empty_files = detect_empty_python_files(project_path)
-    empty_folders = detect_empty_folders(project_path)
-    cycles = detect_circular_imports(project_path)
-
-    legacy_findings = []
-
-    for finding in empty_files + empty_folders:
-        legacy_findings.append(AdvancedFinding(
-            severity=Severity.MINOR if "vacío" in finding.message else Severity.MAJOR,
-            category=Category.MAINTAINABILITY,
-            message=finding.message,
-            file=finding.file,
-            line=finding.line,
-            suggestion=finding.suggestion
-        ))
-
-    for cycle in cycles:
-        legacy_findings.append(AdvancedFinding(
-            severity=Severity.CRITICAL,
-            category=Category.BUG,
-            message="Dependencia circular detectada",
-            file=" → ".join(cycle),
-            line=0,
-            suggestion="Reorganizar imports para eliminar la dependencia circular.",
-            cwe_id="CWE-1047"
-        ))
-
-    # ═══════════════════════════════════════════════════════════
-    # 🔥 UNIFICACIÓN TOTAL
-    # ═══════════════════════════════════════════════════════════
-
-    all_advanced_findings = (
-        advanced_findings +
-        legacy_findings +
-        engine_findings
-    )
-
-    # ═══════════════════════════════════════════════════════════
-    # 📊 MÉTRICAS
-    # ═══════════════════════════════════════════════════════════
-
-    final_metrics = calculate_final_metrics(all_advanced_findings)
-
-    # ═══════════════════════════════════════════════════════════
-    # 🔄 CONVERSIÓN LEGACY
-    # ═══════════════════════════════════════════════════════════
-
-    legacy_findings_list = convert_to_legacy_findings(all_advanced_findings)
+    # 📊 Calcular métricas
+    metrics = calculate_final_metrics(findings)
 
     return {
-        "findings": legacy_findings_list,
-        "critical": final_metrics["blocker"] + final_metrics["critical"],
-        "warnings": final_metrics["major"],
-        "info": final_metrics["minor"] + final_metrics["info"],
-        "score": final_metrics["quality_score"],
-        "status": final_metrics["status"],
-
-        # avanzado
-        "advanced_findings": all_advanced_findings,
-        "metrics": final_metrics
+        "findings": convert_to_legacy_findings(findings),
+        "advanced_findings": findings,
+        "metrics": metrics,
+        "score": metrics["quality_score"],
+        "status": metrics["status"]
     }
 
 
+# ═══════════════════════════════════════════════════════════
+# 📊 MÉTRICAS
+# ═══════════════════════════════════════════════════════════
+
 def calculate_final_metrics(findings: list) -> dict:
-    """Calcula métricas finales con todos los findings"""
-    
+    """Calcula métricas finales"""
+
     metrics = {
+        # severidad
         "blocker": 0,
         "critical": 0,
         "major": 0,
         "minor": 0,
         "info": 0,
+
+        # categoría
         "bugs": 0,
         "vulnerabilities": 0,
         "code_smells": 0,
         "security_hotspots": 0,
         "maintainability": 0,
+
+        # resumen
         "total": len(findings),
         "quality_score": 100,
         "status": "HEALTHY"
     }
-    
-    for finding in findings:
-        # Severidad
-        severity = finding.severity.value.lower()
-        if severity in metrics:
-            metrics[severity] += 1
-        
-        # Categoría
-        category = finding.category.value.lower()
-        if category in metrics:
-            metrics[category] += 1
-    
-    # Calcular score
+
+    for f in findings:
+        # contar severidad
+        sev = f.severity.value.lower()
+        if sev in metrics:
+            metrics[sev] += 1
+
+        # contar categoría
+        cat = f.category.value.lower()
+        if cat in metrics:
+            metrics[cat] += 1
+
+    # 🎯 score
     score = 100
     score -= metrics["blocker"] * 25
     score -= metrics["critical"] * 15
     score -= metrics["major"] * 5
     score -= metrics["minor"] * 2
     score -= metrics["info"] * 0.5
+
     metrics["quality_score"] = max(int(score), 0)
-    
-    # Determinar estado
+
+    # 🚦 estado
     if metrics["blocker"] > 0 or metrics["vulnerabilities"] > 3:
         metrics["status"] = "CRITICAL"
     elif metrics["quality_score"] < 50 or metrics["critical"] > 5:
@@ -158,44 +97,46 @@ def calculate_final_metrics(findings: list) -> dict:
         metrics["status"] = "NEEDS_ATTENTION"
     else:
         metrics["status"] = "HEALTHY"
-    
+
     return metrics
 
 
-def convert_to_legacy_findings(advanced_findings: list) -> list:
-    """Convierte AdvancedFinding a Finding para compatibilidad"""
-    
-    legacy_findings = []
-    
-    for af in advanced_findings:
-        # Mapear severidad avanzada a nivel legacy
-        if af.severity in [Severity.BLOCKER, Severity.CRITICAL]:
+# ═══════════════════════════════════════════════════════════
+# 🔄 COMPATIBILIDAD LEGACY
+# ═══════════════════════════════════════════════════════════
+
+def convert_to_legacy_findings(findings: list) -> list:
+    """Convierte AdvancedFinding → Finding"""
+
+    legacy = []
+
+    for f in findings:
+
+        # mapear severidad
+        if f.severity in [Severity.BLOCKER, Severity.CRITICAL]:
             level = "CRITICAL"
-        elif af.severity == Severity.MAJOR:
+        elif f.severity == Severity.MAJOR:
             level = "WARNING"
         else:
             level = "INFO"
-        
-        # Agregar icono de categoría al mensaje
-        category_icons = {
+
+        # iconos
+        icons = {
             Category.BUG: "🐛",
             Category.VULNERABILITY: "🔒",
             Category.CODE_SMELL: "👃",
             Category.SECURITY_HOTSPOT: "🔥",
             Category.MAINTAINABILITY: "🔧"
         }
-        
-        icon = category_icons.get(af.category, "•")
-        message = f"{icon} {af.message}"
-        
-        legacy_finding = Finding(
+
+        message = f"{icons.get(f.category, '•')} {f.message}"
+
+        legacy.append(Finding(
             level=level,
             message=message,
-            file=af.file,
-            line=af.line,
-            suggestion=af.suggestion
-        )
-        
-        legacy_findings.append(legacy_finding)
-    
-    return legacy_findings
+            file=f.file,
+            line=f.line,
+            suggestion=f.suggestion
+        ))
+
+    return legacy

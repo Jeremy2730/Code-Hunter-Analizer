@@ -10,39 +10,36 @@ from .bug_detector import detect_bugs
 from .vulnerability_scanner import detect_vulnerabilities
 from .code_smell_detector import detect_code_smells
 from .security_hotspots import detect_security_hotspots
+from CodeHunter.utils.project_walker import walk_python_files
 
 
 def run_advanced_analysis(project_path: str) -> Dict:
     """
     Ejecuta análisis avanzado completo del proyecto
-    
-    Returns:
-        Dict con findings categorizados y métricas
     """
-    
+
     print("🔍 Iniciando análisis avanzado...")
-    
-    # Ejecutar todos los detectores
+
+    files = list(walk_python_files(project_path))
+
     print("  🐛 Detectando bugs...")
-    bugs = detect_bugs(project_path)
-    
+    bugs = detect_bugs(files)
+
     print("  🔒 Escaneando vulnerabilidades...")
-    vulnerabilities = detect_vulnerabilities(project_path)
-    
+    vulnerabilities = detect_vulnerabilities(files)
+
     print("  👃 Analizando code smells...")
-    code_smells = detect_code_smells(project_path)
-    
+    code_smells = detect_code_smells(files)
+
     print("  🔥 Identificando security hotspots...")
-    hotspots = detect_security_hotspots(project_path)
-    
-    # Combinar todos los findings
+    hotspots = detect_security_hotspots(files)
+
     all_findings = bugs + vulnerabilities + code_smells + hotspots
-    
-    # Calcular métricas
+
     metrics = calculate_advanced_metrics(all_findings)
-    
+
     print(f"✅ Análisis completado: {len(all_findings)} hallazgos detectados\n")
-    
+
     return {
         "findings": all_findings,
         "metrics": metrics,

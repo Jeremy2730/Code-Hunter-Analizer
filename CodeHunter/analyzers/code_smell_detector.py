@@ -5,27 +5,18 @@ Code Smell Detector - Detecta problemas de diseño y mantenibilidad
 import ast
 from typing import List
 from ..core.models import AdvancedFinding, Severity, Category
-from ..utils.project_walker import walk_project
-import os
 
 
-def detect_code_smells(project_path: str) -> List[AdvancedFinding]:
-    """Detecta code smells en el proyecto"""
-    findings = []
-
-    for root, files in walk_project(project_path):
-        for file in files:
-            if not file.endswith(".py"):
-                continue
-
-            file_path = os.path.join(root, file)
-            findings.extend(analyze_file_for_smells(file_path))
-
-    return findings
+def detect_code_smells(file_path: str) -> List[AdvancedFinding]:
+    if not file_path.endswith(".py"):
+        return []
+    return analyze_file_for_smells(file_path)
 
 
 def analyze_file_for_smells(file_path: str) -> List[AdvancedFinding]:
-    """Analiza un archivo en busca de code smells"""
+    """
+    Analiza un archivo en busca de code smells
+    """
     findings = []
 
     try:
@@ -33,11 +24,10 @@ def analyze_file_for_smells(file_path: str) -> List[AdvancedFinding]:
             source = f.read()
             tree = ast.parse(source)
             lines = source.split('\n')
-
     except Exception:
         return findings
 
-    # 🔍 Ejecutar detecciones
+    # 🔍 Ejecutar detectores
     findings.extend(detect_long_functions(tree, file_path, lines))
     findings.extend(detect_too_many_parameters(tree, file_path, lines))
     findings.extend(detect_deep_nesting(tree, file_path, lines))
