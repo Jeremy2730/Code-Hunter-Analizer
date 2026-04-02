@@ -1,8 +1,10 @@
 import os
 from datetime import datetime
+from collections import defaultdict
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
+
 
 def export_report_to_pdf(project_path, profile_description, analysis_data):
     project_name = os.path.basename(project_path)
@@ -20,15 +22,20 @@ def export_report_to_pdf(project_path, profile_description, analysis_data):
     styles = getSampleStyleSheet()
     title_style = styles["Title"]
     heading_style = styles["Heading2"]
+    subheading_style = styles["Heading3"]
     normal_style = styles["Normal"]
 
+    # ═══════════════════════════════════════
     # TÍTULO
+    # ═══════════════════════════════════════
     elements.append(Paragraph("CODE HUNTER", title_style))
     elements.append(Spacer(1, 0.2 * inch))
     elements.append(Paragraph("Informe Profesional de Diagnóstico", heading_style))
     elements.append(Spacer(1, 0.4 * inch))
 
+    # ═══════════════════════════════════════
     # PERFIL
+    # ═══════════════════════════════════════
     elements.append(Paragraph("1. Perfil del Sistema Analizado", heading_style))
     elements.append(Spacer(1, 0.2 * inch))
 
@@ -39,7 +46,9 @@ def export_report_to_pdf(project_path, profile_description, analysis_data):
 
     elements.append(Spacer(1, 0.4 * inch))
 
+    # ═══════════════════════════════════════
     # RESULTADOS
+    # ═══════════════════════════════════════
     elements.append(Paragraph("2. Resultado del Análisis", heading_style))
     elements.append(Spacer(1, 0.2 * inch))
 
@@ -52,7 +61,9 @@ def export_report_to_pdf(project_path, profile_description, analysis_data):
     elements.append(Paragraph(f"Advertencias: {warnings}", normal_style))
     elements.append(Spacer(1, 0.3 * inch))
 
-    # DETALLE
+    # ═══════════════════════════════════════
+    # DETALLE AGRUPADO
+    # ═══════════════════════════════════════
     elements.append(Paragraph("3. Detalle de Hallazgos", heading_style))
     elements.append(Spacer(1, 0.2 * inch))
 
@@ -61,14 +72,30 @@ def export_report_to_pdf(project_path, profile_description, analysis_data):
     if not findings:
         elements.append(Paragraph("No se detectaron problemas relevantes.", normal_style))
     else:
+        # 🔥 AGRUPAR POR ARCHIVO
+        grouped = defaultdict(list)
         for f in findings:
-            level = f.level.value if hasattr(f.level, "value") else f.level
-            elements.append(Paragraph(f"[{level}] {f.message}", normal_style))
-            elements.append(Paragraph(f"Archivo: {f.file}", normal_style))
-            elements.append(Paragraph(f"Línea: {f.line}", normal_style))
-            elements.append(Paragraph(f"Sugerencia: {f.suggestion}", normal_style))
+            grouped[f.file].append(f)
+
+        # 🔥 ORDENAR ARCHIVOS
+        for file_path in sorted(grouped.keys()):
+
+            elements.append(Paragraph(f"📁 {file_path}", subheading_style))
+            elements.append(Spacer(1, 0.15 * inch))
+
+            for f in grouped[file_path]:
+                level = f.level.value if hasattr(f.level, "value") else f.level
+
+                elements.append(Paragraph(f"[{level}] {f.message}", normal_style))
+                elements.append(Paragraph(f"Línea: {f.line}", normal_style))
+                elements.append(Paragraph(f"Sugerencia: {f.suggestion}", normal_style))
+                elements.append(Spacer(1, 0.25 * inch))
+
             elements.append(Spacer(1, 0.3 * inch))
 
+    # ═══════════════════════════════════════
+    # FOOTER
+    # ═══════════════════════════════════════
     elements.append(Spacer(1, 0.5 * inch))
     elements.append(Paragraph(
         f"Documento generado por CodeHunter — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",

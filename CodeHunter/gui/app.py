@@ -1,6 +1,13 @@
 """
 CodeHunter GUI - Ventana Principal
-Layout: Sidebar izquierdo + Barra de título + Área de contenido
+
+🎯 Propósito:
+Contenedor principal de la aplicación.
+
+🧠 Responsabilidades:
+- Manejar layout general
+- Controlar navegación entre vistas
+- Sincronizar estado global
 """
 
 import os
@@ -16,18 +23,19 @@ from .state import AppState
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+
 COLORS = {
-    "bg_dark":       "#0D1117",
-    "bg_panel":      "#161B22",
-    "bg_card":       "#21262D",
-    "bg_hover":      "#2D333B",
-    "accent":        "#58A6FF",
-    "accent_green":  "#3FB950",
+    "bg_dark": "#0D1117",
+    "bg_panel": "#161B22",
+    "bg_card": "#21262D",
+    "bg_hover": "#2D333B",
+    "accent": "#58A6FF",
+    "accent_green": "#3FB950",
     "accent_yellow": "#D29922",
-    "accent_red":    "#F85149",
-    "text_primary":  "#E6EDF3",
-    "text_muted":    "#7D8590",
-    "border":        "#30363D",
+    "accent_red": "#F85149",
+    "text_primary": "#E6EDF3",
+    "text_muted": "#7D8590",
+    "border": "#30363D",
 }
 
 
@@ -37,12 +45,11 @@ class CodeHunterApp(ctk.CTk):
 
         self.app_state = AppState()
 
-        self.title("CodeHunter  •  Analizador de Proyectos Python")
+        self.title("CodeHunter • Analizador Python")
         self.geometry("1280x800")
-        self.minsize(1000, 650)
         self.configure(fg_color=COLORS["bg_dark"])
 
-        # ── Layout: sidebar | (titulo + contenido) ────────────────────────────
+        # Layout base
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -50,89 +57,87 @@ class CodeHunterApp(ctk.CTk):
         self.sidebar = Sidebar(self, self.app_state, self._navigate, COLORS)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
 
-        # Columna derecha: título arriba + contenido abajo
-        right_col = ctk.CTkFrame(self, fg_color=COLORS["bg_dark"], corner_radius=0)
-        right_col.grid(row=0, column=1, sticky="nsew")
-        right_col.grid_columnconfigure(0, weight=1)
-        right_col.grid_rowconfigure(1, weight=1)
+        # Panel derecho
+        self.content_frame = ctk.CTkFrame(self, fg_color=COLORS["bg_dark"])
+        self.content_frame.grid(row=0, column=1, sticky="nsew")
 
-        # ── Barra de título del proyecto ──────────────────────────────────────
+        # 🔥 IMPORTANTE (después de crear)
+        self.content_frame.grid_columnconfigure(0, weight=1)
+        self.content_frame.grid_rowconfigure(1, weight=1)
+
+        # Barra título
         self.title_bar = ctk.CTkFrame(
-            right_col,
+            self.content_frame,
             fg_color=COLORS["bg_panel"],
-            corner_radius=0,
-            height=48,
+            height=50
         )
         self.title_bar.grid(row=0, column=0, sticky="ew")
-        self.title_bar.grid_propagate(False)
-        self.title_bar.grid_columnconfigure(0, weight=1)
 
-        self.project_title_label = ctk.CTkLabel(
+        self.project_title = ctk.CTkLabel(
             self.title_bar,
             text="",
-            font=ctk.CTkFont(size=36, weight="bold"),
-            text_color="#58A6FF",
-            anchor="center",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color=COLORS["accent"]
         )
-        self.project_title_label.grid(row=0, column=0, sticky="nsew", padx=20)
+        self.project_title.pack(pady=10)
 
-        # ── Área de contenido ─────────────────────────────────────────────────
-        self.content_frame = ctk.CTkFrame(
-            right_col, fg_color=COLORS["bg_dark"], corner_radius=0
+        # 🔥 AHORA SÍ CREAR views_container (ANTES NO EXISTÍA)
+        self.views_container = ctk.CTkFrame(
+            self.content_frame,
+            fg_color=COLORS["bg_dark"]
         )
-        self.content_frame.grid(row=1, column=0, sticky="nsew")
-        self.content_frame.grid_columnconfigure(0, weight=1)
-        self.content_frame.grid_rowconfigure(0, weight=1)
+        self.views_container.grid(row=1, column=0, sticky="nsew")
 
-        # ── Vistas ────────────────────────────────────────────────────────────
-        self._views: dict[str, ctk.CTkFrame] = {}
-        self._active_view: str | None = None
+        # 🔥 CONFIGURAR EXPANSIÓN
+        self.views_container.grid_columnconfigure(0, weight=1)
+        self.views_container.grid_rowconfigure(0, weight=1)
+
+        # Vistas
+        self.views = {}
         self._init_views()
 
-        # Suscribirse a cambios de estado para actualizar el título
+        # Estado
         self.app_state.subscribe(self._on_state_change)
 
+        # Vista inicial
         self._navigate("dashboard")
 
     def _init_views(self):
+        """Inicializa todas las vistas y las monta en el contenedor"""
+
         view_classes = {
             "dashboard": DashboardView,
-            "findings":  FindingsView,
-            "tree":      TreeView,
-            "search":    SearchView,
+            "findings": FindingsView,
+            "tree": TreeView,
+            "search": SearchView,
         }
-        for name, ViewClass in view_classes.items():
-            view = ViewClass(self.content_frame, self.app_state, COLORS)
-            view.grid(row=0, column=0, sticky="nsew")
-            self._views[name] = view
 
-    def _navigate(self, view_name: str):
-        for name, view in self._views.items():
+        for name, View in view_classes.items():
+            v = View(self.views_container, self.app_state, COLORS)
+            v.grid(row=0, column=0, sticky="nsew")  # 🔥 CLAVE PARA QUE EXPANDA
+            self.views[name] = v
+
+    def _navigate(self, view_name):
+        """Cambia entre vistas"""
+        for name, view in self.views.items():
             if name == view_name:
                 view.tkraise()
-            else:
-                view.lower()
-        self._active_view = view_name
-        self.sidebar.set_active(view_name)
+
+        # Sincronizar sidebar
+        if hasattr(self.sidebar, "set_active"):
+            self.sidebar.set_active(view_name)
 
     def _on_state_change(self, event, data):
-        if event in ("folder_selected", "analysis_done", "analysis_started", "reset"):
-            self.after(0, self._update_title_bar)
+        """Escucha cambios del estado global"""
+        if event in ("folder_selected", "analysis_done"):
+            self._update_title()
 
-    def _update_title_bar(self):
+    def _update_title(self):
+        """Actualiza el nombre del proyecto en la UI"""
         path = self.app_state.project_path
         if not path:
-            self.project_title_label.configure(text="")
+            self.project_title.configure(text="")
             return
 
         name = os.path.basename(path)
-        self.project_title_label.configure(
-            text=f"📂  {name}",
-            text_color=COLORS["accent"],
-        )
-
-        name = os.path.basename(path)
-        self.project_title_label.configure(
-            text=f" {name}",
-            text_color="#58A6FF",
-        )
+        self.project_title.configure(text=f"📂 {name}")

@@ -8,7 +8,40 @@ from CodeHunter.core.models import AdvancedFinding, Severity, Category
 
 
 # ═══════════════════════════════════════════════════════════
-# 🚀 ENTRY POINT (NUEVO CONTRATO)
+# 🧠 HELPER CENTRAL
+# ═══════════════════════════════════════════════════════════
+
+def create_finding(
+    *,
+    severity,
+    category,
+    message,
+    file_path,
+    line_num,
+    lines,
+    suggestion,
+    code_snippet=None,
+    cwe_id=None
+) -> AdvancedFinding:
+
+    snippet = code_snippet
+    if snippet is None:
+        snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
+
+    return AdvancedFinding(
+        severity=severity,
+        category=category,
+        message=message,
+        file=file_path,
+        line=line_num,
+        suggestion=suggestion,
+        code_snippet=snippet,
+        cwe_id=cwe_id
+    )
+
+
+# ═══════════════════════════════════════════════════════════
+# 🚀 ENTRY POINT
 # ═══════════════════════════════════════════════════════════
 
 def detect_bugs(file_path: str) -> List[AdvancedFinding]:
@@ -16,7 +49,6 @@ def detect_bugs(file_path: str) -> List[AdvancedFinding]:
     Analiza UN archivo en busca de bugs
     (Compatible con AnalysisEngine)
     """
-
     findings = []
 
     try:
@@ -28,7 +60,7 @@ def detect_bugs(file_path: str) -> List[AdvancedFinding]:
 
     except Exception:
         return findings
-
+    
     # 🔍 Ejecutar detecciones
     findings.extend(detect_except_pass(tree, file_path, lines))
     findings.extend(detect_unused_variables(tree, file_path, lines))
@@ -41,7 +73,7 @@ def detect_bugs(file_path: str) -> List[AdvancedFinding]:
 
 
 # ═══════════════════════════════════════════════════════════
-# 🔍 DETECTORES INTERNOS (SIN CAMBIOS GRANDES)
+# 🔍 DETECTORES
 # ═══════════════════════════════════════════════════════════
 
 def detect_except_pass(tree: ast.AST, file_path: str, lines: List[str]) -> List[AdvancedFinding]:
@@ -50,17 +82,14 @@ def detect_except_pass(tree: ast.AST, file_path: str, lines: List[str]) -> List[
     for node in ast.walk(tree):
         if isinstance(node, ast.ExceptHandler):
             if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
-                line_num = node.lineno
-                snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
-
-                findings.append(AdvancedFinding(
+                findings.append(create_finding(
                     severity=Severity.MAJOR,
                     category=Category.BUG,
                     message="Excepción capturada pero ignorada con 'pass'",
-                    file=file_path,
-                    line=line_num,
-                    suggestion="Registra el error o maneja la excepción correctamente.",
-                    code_snippet=snippet
+                    file_path=file_path,
+                    line_num=node.lineno,
+                    lines=lines,
+                    suggestion="Registra el error o maneja la excepción correctamente."
                 ))
 
     return findings
@@ -90,16 +119,14 @@ def detect_unused_variables(tree: ast.AST, file_path: str, lines: List[str]) -> 
 
     for var_name, line_num in analyzer.assigned.items():
         if var_name not in analyzer.used and not var_name.startswith('_'):
-            snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
-
-            findings.append(AdvancedFinding(
+            findings.append(create_finding(
                 severity=Severity.MINOR,
                 category=Category.CODE_SMELL,
                 message=f"Variable '{var_name}' no usada",
-                file=file_path,
-                line=line_num,
-                suggestion=f"Eliminar '{var_name}' o usar _ si es intencional.",
-                code_snippet=snippet
+                file_path=file_path,
+                line_num=line_num,
+                lines=lines,
+                suggestion=f"Eliminar '{var_name}' o usar _ si es intencional."
             ))
 
     return findings
@@ -111,17 +138,14 @@ def detect_constant_conditions(tree: ast.AST, file_path: str, lines: List[str]) 
     for node in ast.walk(tree):
         if isinstance(node, ast.If) and isinstance(node.test, ast.Constant):
             if node.test.value in [True, False]:
-                line_num = node.lineno
-                snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
-
-                findings.append(AdvancedFinding(
+                findings.append(create_finding(
                     severity=Severity.MAJOR,
                     category=Category.BUG,
                     message=f"Condición siempre {node.test.value}",
-                    file=file_path,
-                    line=line_num,
-                    suggestion="Revisar lógica, condición constante.",
-                    code_snippet=snippet
+                    file_path=file_path,
+                    line_num=node.lineno,
+                    lines=lines,
+                    suggestion="Revisar lógica, condición constante."
                 ))
 
     return findings
@@ -138,17 +162,15 @@ def detect_unreachable_code(tree: ast.AST, file_path: str, lines: List[str]) -> 
             for i, stmt in enumerate(node.body):
                 if isinstance(stmt, (ast.Return, ast.Raise)) and i + 1 < len(node.body):
                     next_stmt = node.body[i + 1]
-                    line_num = next_stmt.lineno
-                    snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
 
-                    self.findings.append(AdvancedFinding(
+                    self.findings.append(create_finding(
                         severity=Severity.MAJOR,
                         category=Category.BUG,
                         message="Código inalcanzable",
-                        file=file_path,
-                        line=line_num,
-                        suggestion="Eliminar o revisar lógica.",
-                        code_snippet=snippet
+                        file_path=file_path,
+                        line_num=next_stmt.lineno,
+                        lines=lines,
+                        suggestion="Eliminar o revisar lógica."
                     ))
                     break
 
@@ -176,17 +198,14 @@ def detect_missing_return(tree: ast.AST, file_path: str, lines: List[str]) -> Li
                         has_empty = True
 
             if has_value and has_empty:
-                line_num = node.lineno
-                snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
-
-                findings.append(AdvancedFinding(
+                findings.append(create_finding(
                     severity=Severity.MAJOR,
                     category=Category.BUG,
                     message=f"Retornos inconsistentes en '{node.name}'",
-                    file=file_path,
-                    line=line_num,
-                    suggestion="Unificar retornos.",
-                    code_snippet=snippet
+                    file_path=file_path,
+                    line_num=node.lineno,
+                    lines=lines,
+                    suggestion="Unificar retornos."
                 ))
 
     return findings
@@ -199,18 +218,16 @@ def detect_mutable_default_args(tree: ast.AST, file_path: str, lines: List[str])
         if isinstance(node, ast.FunctionDef):
             for default in node.args.defaults:
                 if isinstance(default, (ast.List, ast.Dict, ast.Set)):
-                    line_num = node.lineno
-                    snippet = lines[line_num - 1].strip() if line_num <= len(lines) else ""
-
-                    findings.append(AdvancedFinding(
+                    findings.append(create_finding(
                         severity=Severity.CRITICAL,
                         category=Category.BUG,
                         message=f"Argumento mutable en '{node.name}'",
-                        file=file_path,
-                        line=line_num,
+                        file_path=file_path,
+                        line_num=node.lineno,
+                        lines=lines,
                         suggestion="Usar None y crear dentro.",
-                        code_snippet=snippet,
                         cwe_id="CWE-1188"
                     ))
 
     return findings
+    
