@@ -3,6 +3,7 @@ CodeHunter GUI - Vista Hallazgos
 Lista filtrable de todos los problemas detectados.
 """
 
+import os
 import customtkinter as ctk
 from ..utils import get_level as _level, get_attr as _attr
 
@@ -18,6 +19,7 @@ class FindingsView(ctk.CTkFrame):
         self._build_findings()
         self.state.subscribe(self._on_findings_update)
         self.bind("<Map>", lambda e: self._render_findings())
+        self.preview_window = None
 
     def _build_findings(self):
         C = self.colors
@@ -112,6 +114,7 @@ class FindingsView(ctk.CTkFrame):
             row = ctk.CTkFrame(self.list_frame, fg_color=C["bg_card"], corner_radius=8, height=52)   #cambio de tamaó de cards
             row.pack(fill="x", pady=4)
             row.pack_propagate(False)  # ← esto impide que el contenido estire la card
+            row.bind("<Button-1>", lambda e, f=finding: self._open_finding(f))
 
             # Indicador de color lateral
             ctk.CTkFrame(row, width=4, fg_color=color, corner_radius=2
@@ -139,6 +142,35 @@ class FindingsView(ctk.CTkFrame):
                     font=ctk.CTkFont(size=12), text_color=C["text_muted"],
                 ).pack(side="right", padx=12, pady=10)
 
+    def _open_finding(self, finding):
+        file_path = _attr(finding, "file")
+        line = _attr(finding, "line", 1)
+
+        if not file_path or not os.path.exists(file_path):
+            return
+
+        # 🔥 obtener app real
+        app = self.master.master
+
+        tree_view = app.views.get("tree")
+
+        if not tree_view:
+            return
+
+        # 🔥 recolectar TODOS los errores del archivo
+        related = []
+        for f in self.state.findings:
+            if _attr(f, "file") == file_path:
+                related.append((_attr(f, "line", 1), _level(f)))
+
+        # 🔥 abrir preview con highlights
+        tree_view.open_file(file_path, related)
+
+        # 🔥 cambiar vista automáticamente
+        tree_view.tkraise()
+
+
+    # ───────────────── EVENTOS ─────────────────
     def _on_findings_update(self, event, data):
         if event in ("analysis_done", "reset"):
             self.after(0, self._render_findings)

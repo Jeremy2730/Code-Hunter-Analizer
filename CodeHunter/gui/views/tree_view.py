@@ -1,121 +1,213 @@
 """
-CodeHunter GUI - Vista Árbol del Proyecto
-Muestra la estructura con líneas tipo ├── └──
+CodeHunter GUI - TreeView PRO MAX 🔥
+✔ Expandible estilo VSCode
+✔ Usa walker (ignora venv/cache REAL)
+✔ Hover UI PRO
+✔ Hint visual separado (no se mezcla)
+✔ Preview integrado
+✔ Resaltado de errores
 """
 
 import os
 import customtkinter as ctk
+from CodeHunter.utils.project_walker import IGNORE_DIRS
 
 
 class TreeView(ctk.CTkFrame):
     def __init__(self, parent, state, colors):
         super().__init__(parent, fg_color=colors["bg_dark"], corner_radius=0)
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        self.state  = state
+
+        self.state = state
         self.colors = colors
-        self._build_tree()
+        self.expanded = set()
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        self._build_ui()
         self.state.subscribe(self._on_tree_update)
 
-    def _build_tree(self):
+    # ───────────────── UI ─────────────────
+    def _build_ui(self):
         C = self.colors
 
-        ctk.CTkLabel(self, text="Árbol del Proyecto",
-            font=ctk.CTkFont(size=24, weight="bold"), text_color=C["text_primary"],
-        ).grid(row=0, column=0, padx=30, pady=(28, 16), sticky="w")
+        container = ctk.CTkFrame(self, fg_color="transparent")
+        container.grid(row=0, column=0, sticky="nsew")
 
-        self.tree_frame = ctk.CTkScrollableFrame(self, fg_color=C["bg_panel"], corner_radius=12)
-        self.tree_frame.grid(row=1, column=0, padx=30, pady=(0, 24), sticky="nsew")
+        # 🔥 proporción tipo VSCode
+        container.grid_columnconfigure(0, weight=2)  # árbol
+        container.grid_columnconfigure(1, weight=8)  # preview
+        container.grid_rowconfigure(0, weight=1)
 
-        ctk.CTkLabel(self.tree_frame,
-            text="Selecciona una carpeta de proyecto para ver su estructura.",
-            font=ctk.CTkFont(family="Courier New", size=13), text_color=C["text_muted"],
-        ).pack(pady=40)
+        # ───── IZQUIERDA (TREE)
+        self.tree_frame = ctk.CTkScrollableFrame(
+            container,
+            fg_color=C["bg_panel"],
+            corner_radius=12
+        )
+        self.tree_frame.grid(row=0, column=0, sticky="nsew", padx=(20, 10), pady=20)
 
+        # ───── DERECHA (PREVIEW)
+        right = ctk.CTkFrame(container, fg_color=C["bg_panel"], corner_radius=12)
+        right.grid(row=0, column=1, sticky="nsew", padx=(10, 20), pady=20)
+
+        # 🔥 EXPANSIÓN REAL (arregla preview delgado)
+        right.grid_columnconfigure(0, weight=1)
+        right.grid_rowconfigure(1, weight=1)
+
+        self.preview_title = ctk.CTkLabel(
+            right,
+            text="📄 Preview",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=C["text_primary"]
+        )
+        self.preview_title.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+
+        self.preview_box = ctk.CTkTextbox(right)
+        self.preview_box.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+
+        self.preview_box.insert("0.0", "Selecciona un archivo")
+
+        self._render_tree()
+
+    # ───────────────── TREE ─────────────────
     def _render_tree(self):
         for w in self.tree_frame.winfo_children():
             w.destroy()
 
         path = self.state.project_path
-        if not path or not os.path.isdir(path):
-            ctk.CTkLabel(self.tree_frame,
-                text="Selecciona una carpeta de proyecto.",
-                font=ctk.CTkFont(family="Courier New", size=13),
-                text_color=self.colors["text_muted"],
-            ).pack(pady=40)
+        if not path:
             return
 
-        # Nombre raíz del proyecto
+        self._create_item(self.tree_frame, path, os.path.basename(path), 0, True)
+
+    def _create_item(self, parent, path, name, level, is_dir):
         C = self.colors
-        root_name = os.path.basename(path)
-        ctk.CTkLabel(self.tree_frame,
-            text=f"📁 {root_name}/",
-            font=ctk.CTkFont(family="Courier New", size=13, weight="bold"),
-            text_color=C["accent"], anchor="w",
-        ).pack(fill="x", padx=12, pady=(8, 2))
 
-        self._render_dir(path, prefix="")
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x")
 
-    def _render_dir(self, dir_path, prefix):
-        C = self.colors
-        IGNORE = {".git", "__pycache__", ".venv", "venv", "node_modules", ".idea", ".vscode"}
+        indent = level * 20
 
-        try:
-            entries = sorted(os.scandir(dir_path), key=lambda e: (not e.is_dir(), e.name))
-            entries = [e for e in entries if e.name not in IGNORE and not e.name.startswith(".")]
-        except PermissionError:
-            return
+        container = ctk.CTkFrame(row, fg_color="transparent")
+        container.pack(fill="x", padx=(indent, 0))
 
-        for i, entry in enumerate(entries):
-            is_last = (i == len(entries) - 1)
-            is_dir  = entry.is_dir()
+        arrow = "▼" if path in self.expanded else "▶" if is_dir else " "
+        icon = "📂" if path in self.expanded else "📁" if is_dir else "📄"
 
-            # Conector ├── o └──
-            connector = "└── " if is_last else "├── "
-            icon      = self._file_icon(entry.name, is_dir)
+        # 🔥 CONTENEDOR HORIZONTAL
+        line = ctk.CTkFrame(container, fg_color="transparent")
+        line.pack(fill="x")
 
-            # Color según tipo
-            if is_dir:
-                color  = C["accent"]
-                weight = "bold"
-                name   = entry.name + "/"
-            else:
-                color  = C["text_primary"]
-                weight = "normal"
-                name   = entry.name
+        # 🔹 Nombre principal
+        name_label = ctk.CTkLabel(
+            line,
+            text=f"{arrow} {icon} {name}",
+            anchor="w",
+            cursor="hand2",
+            text_color=C["accent"] if is_dir else C["text_primary"],
+            fg_color="transparent"
+        )
+        name_label.pack(side="left", fill="x", expand=True)
 
-            line = f"{prefix}{connector}{icon} {name}"
+        # 🔹 Hint separado (NO mezclado)
+        if is_dir and path not in self.expanded:
+            hint_label = ctk.CTkLabel(
+                line,
+                text="  (click para expandir)",
+                font=ctk.CTkFont(size=11),
+                text_color=C["text_muted"]
+            )
+            hint_label.pack(side="left")
 
-            ctk.CTkLabel(self.tree_frame,
-                text=line,
-                font=ctk.CTkFont(family="Courier New", size=12, weight=weight),
-                text_color=color, anchor="w",
-            ).pack(fill="x", padx=12, pady=0)
+        # 🔥 HOVER EN TODA LA FILA
+        def _hover_in(e):
+            row.configure(fg_color=C["bg_hover"])
 
-            # Recursión con el prefijo correcto
-            if is_dir and prefix.count("│") + prefix.count(" ") // 4 < 4:
-                extension = "    " if is_last else "│   "
-                self._render_dir(entry.path, prefix + extension)
+        def _hover_out(e):
+            row.configure(fg_color="transparent")
 
-    def _file_icon(self, name: str, is_dir: bool) -> str:
+        row.bind("<Enter>", _hover_in)
+        row.bind("<Leave>", _hover_out)
+        name_label.bind("<Enter>", _hover_in)
+        name_label.bind("<Leave>", _hover_out)
+
+        # 🔥 CLICK
         if is_dir:
-            return "📁"
-        ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
-        return {
-            "py":   "🐍",
-            "txt":  "📄",
-            "md":   "📝",
-            "json": "🔧",
-            "yaml": "🔧",
-            "yml":  "🔧",
-            "toml": "🔧",
-            "cfg":  "⚙",
-            "ini":  "⚙",
-            "pdf":  "📕",
-            "png":  "🖼",
-            "jpg":  "🖼",
-        }.get(ext, "📄")
+            name_label.bind("<Button-1>", lambda e, p=path: self._toggle(p))
+        else:
+            name_label.bind("<Button-1>", lambda e, p=path: self.open_file(p))
 
+        # 🔥 hijos
+        if is_dir and path in self.expanded:
+            self._render_children(parent, path, level + 1)
+
+    def _render_children(self, parent, path, level):
+        try:
+            entries = sorted(
+                os.scandir(path),
+                key=lambda e: (not e.is_dir(), e.name.lower())
+            )
+        except Exception:
+            return
+
+        for entry in entries:
+            # 🔥 IGNORE REAL (walker)
+            if entry.name in IGNORE_DIRS or entry.name.startswith("."):
+                continue
+
+            self._create_item(
+                parent,
+                entry.path,
+                entry.name,
+                level,
+                entry.is_dir()
+            )
+
+    def _toggle(self, path):
+        if path in self.expanded:
+            self.expanded.remove(path)
+        else:
+            self.expanded.add(path)
+
+        self._render_tree()
+
+    # ───────────────── PREVIEW ─────────────────
+    def open_file(self, path, highlight_lines=None):
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+
+            self.preview_box.delete("0.0", "end")
+
+            for i, content in enumerate(lines, start=1):
+                self.preview_box.insert("end", f"{i:4} | {content}")
+
+            self.preview_title.configure(text=f"📄 {os.path.basename(path)}")
+
+            # limpiar tags
+            self.preview_box.tag_remove("critical", "0.0", "end")
+            self.preview_box.tag_remove("warning", "0.0", "end")
+            self.preview_box.tag_remove("info", "0.0", "end")
+
+            # 🔥 highlight múltiple
+            if highlight_lines:
+                for ln, level in highlight_lines:
+                    if ln > 0:
+                        self.preview_box.tag_add(level, f"{ln}.0", f"{ln}.end")
+
+                self.preview_box.see(f"{highlight_lines[0][0]}.0")
+
+            # colores
+            self.preview_box.tag_config("critical", background="#5A1E1E")
+            self.preview_box.tag_config("warning", background="#5A4B1E")
+            self.preview_box.tag_config("info", background="#1E3A5A")
+
+        except Exception as e:
+            self.preview_box.delete("0.0", "end")
+            self.preview_box.insert("0.0", str(e))
+
+    # ───────────────── EVENTOS ─────────────────
     def _on_tree_update(self, event, data):
         if event in ("folder_selected", "analysis_done", "reset"):
             self.after(0, self._render_tree)
