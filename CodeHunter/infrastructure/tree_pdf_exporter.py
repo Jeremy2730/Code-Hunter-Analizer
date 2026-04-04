@@ -1,88 +1,108 @@
 """
-CodeHunter - Tree PDF Exporter
+Tree PDF Exporter - Exportador de estructura del proyecto
 
-🎯 Propósito:
-Exportar la estructura del proyecto en formato árbol a PDF.
+Responsabilidad:
+- Generar representación visual del árbol de archivos
+- Exportarlo como documento PDF
 
-🧠 Qué hace:
-- Recorre el proyecto usando walk_project (fuente única)
-- Genera estructura tipo:
-    📂 proyecto
-     ├── archivo.py
-     └── carpeta/
-- Exporta usando reportlab
+Qué hace:
+- Recorre el proyecto recursivamente
+- Genera estructura tipo consola (├── └──)
+- Mantiene formato legible en PDF
 
-🔥 No depende de la UI
+Características:
+- No depende de la UI
+- Compatible con cualquier proyecto
+- Usa fuente monoespaciada para alineación
+
+Entrada:
+- project_path
+
+Salida:
+- PDF con estructura del proyecto
 """
 
 import os
 from datetime import datetime
+from tkinter import filedialog
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
-from CodeHunter.utils.project_walker import walk_project
+from CodeHunter.utils.project_walker import IGNORE_DIRS
 
 
 def build_tree_lines(project_path):
     lines = []
     root_name = os.path.basename(project_path)
 
-    lines.append(f"📂 {root_name}/")
+    # 🔥 raíz limpia
+    lines.append(f"{root_name}/")
 
     def walk(dir_path, prefix=""):
-        entries = []
         try:
-            entries = sorted(os.listdir(dir_path))
+            entries = sorted(
+                os.scandir(dir_path),
+                key=lambda e: (not e.is_dir(), e.name.lower())
+            )
         except Exception:
             return
 
-        entries = [e for e in entries if not e.startswith(".")]
+        entries = [
+            e for e in entries
+            if e.name not in IGNORE_DIRS and not e.name.startswith(".")
+        ]
 
-        for i, name in enumerate(entries):
-            full_path = os.path.join(dir_path, name)
+        for i, entry in enumerate(entries):
             is_last = (i == len(entries) - 1)
 
+            # 🔥 símbolos compatibles (NO emojis)
             connector = "└── " if is_last else "├── "
-            line = f"{prefix}{connector}{name}"
-            lines.append(line)
+            extension = "    " if is_last else "│   "
 
-            if os.path.isdir(full_path):
-                extension = "    " if is_last else "│   "
-                walk(full_path, prefix + extension)
+            # 🔥 sin iconos → evita cuadros
+            lines.append(f"{prefix}{connector}{entry.name}")
+
+            if entry.is_dir():
+                walk(entry.path, prefix + extension)
 
     walk(project_path)
     return lines
 
 
 def export_tree_to_pdf(project_path):
-    project_name = os.path.basename(project_path)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
-    filename = os.path.join(
-        downloads_path,
-        f"CodeHunter_Tree_{project_name}_{timestamp}.pdf"
+    # 🔥 MISMO COMPORTAMIENTO QUE DASHBOARD
+    save_path = filedialog.asksaveasfilename(
+        defaultextension=".pdf",
+        filetypes=[("PDF files", "*.pdf")],
+        initialfile="codehunter_tree.pdf",
+        title="Guardar árbol del proyecto"
     )
 
-    doc = SimpleDocTemplate(filename)
+    if not save_path:
+        return None
+
+    doc = SimpleDocTemplate(save_path)
     styles = getSampleStyleSheet()
     normal = styles["Normal"]
 
     elements = []
 
-    # Título
+    # ───── HEADER
     elements.append(Paragraph("CODE HUNTER", styles["Title"]))
     elements.append(Spacer(1, 0.2 * inch))
     elements.append(Paragraph("Estructura del Proyecto", styles["Heading2"]))
     elements.append(Spacer(1, 0.3 * inch))
 
-    # Árbol
+    # ───── TREE
     lines = build_tree_lines(project_path)
 
     for line in lines:
-        elements.append(Paragraph(f"<font name='Courier'>{line}</font>", normal))
+        elements.append(
+            Paragraph(f"<font name='Courier'>{line}</font>", normal)
+        )
         elements.append(Spacer(1, 0.12 * inch))
 
+    # ───── FOOTER
     elements.append(Spacer(1, 0.4 * inch))
     elements.append(Paragraph(
         f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
@@ -90,4 +110,5 @@ def export_tree_to_pdf(project_path):
     ))
 
     doc.build(elements)
-    return filename
+
+    return save_path

@@ -100,6 +100,7 @@ class AdvancedFinding:
     file: str
     line: int
     suggestion: str
+    level: str = ""  # compatibilidad automática
 
     # Opcionales
     code_snippet: str = ""
@@ -112,6 +113,17 @@ class AdvancedFinding:
 
         if isinstance(self.category, str):
             self.category = Category(self.category)
+
+        # 🔥 SINCRONIZAR level AUTOMÁTICAMENTE
+        severity_to_level = {
+            Severity.BLOCKER: "critical",
+            Severity.CRITICAL: "critical",
+            Severity.MAJOR: "warning",
+            Severity.MINOR: "warning",
+            Severity.INFO: "info"
+        }
+
+        self.level = severity_to_level.get(self.severity, "info")
 
         # Normalizar ruta
         self.file = os.path.relpath(self.file)

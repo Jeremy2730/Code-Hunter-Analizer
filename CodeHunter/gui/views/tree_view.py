@@ -1,16 +1,34 @@
 """
-CodeHunter GUI - TreeView PRO MAX 🔥
-✔ Expandible estilo VSCode
-✔ Usa walker (ignora venv/cache REAL)
-✔ Hover UI PRO
-✔ Hint visual separado (no se mezcla)
-✔ Preview integrado
-✔ Resaltado de errores
+TreeView - Explorador visual del proyecto (tipo VSCode)
+
+Responsabilidad:
+- Mostrar estructura de carpetas y archivos
+- Permitir navegación interactiva (expandir/colapsar)
+- Mostrar preview de archivos seleccionados
+- Resaltar líneas con errores (findings)
+
+Características:
+- Ignora carpetas basura (venv, cache, etc)
+- Hover UI tipo editor moderno
+- Preview integrado (sin abrir ventanas nuevas)
+- Soporte para múltiples highlights
+
+Extras:
+- Exportación del árbol del proyecto a PDF
+
+Depende de:
+- AppState (estado global)
+- project_walker (filtrado de archivos)
+- tree_pdf_exporter (exportación)
 """
+
+
 
 import os
 import customtkinter as ctk
+from tkinter import messagebox
 from CodeHunter.utils.project_walker import IGNORE_DIRS
+from CodeHunter.infrastructure.tree_pdf_exporter import export_tree_to_pdf
 
 
 class TreeView(ctk.CTkFrame):
@@ -21,8 +39,9 @@ class TreeView(ctk.CTkFrame):
         self.colors = colors
         self.expanded = set()
 
+        # 🔥 FIX LAYOUT GLOBAL
+        self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=1)
 
         self._build_ui()
         self.state.subscribe(self._on_tree_update)
@@ -31,27 +50,39 @@ class TreeView(ctk.CTkFrame):
     def _build_ui(self):
         C = self.colors
 
-        container = ctk.CTkFrame(self, fg_color="transparent")
-        container.grid(row=0, column=0, sticky="nsew")
+        # ───────── TOP BAR
+        top_bar = ctk.CTkFrame(self, fg_color="transparent", height=40)
+        top_bar.grid(row=0, column=0, sticky="ew", padx=20, pady=(5, 0))
 
-        # 🔥 proporción tipo VSCode
-        container.grid_columnconfigure(0, weight=2)  # árbol
-        container.grid_columnconfigure(1, weight=8)  # preview
+        btn_export = ctk.CTkButton(
+            top_bar,
+            text="🌳 Exportar Árbol",
+            height=36,
+            command=self.export_tree_pdf
+        )
+        btn_export.pack(side="left")
+
+        # ───────── CONTENEDOR
+        container = ctk.CTkFrame(self, fg_color="transparent")
+        container.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+
+        # 🔥 PROPORCIÓN REAL
+        container.grid_columnconfigure(0, weight=3)
+        container.grid_columnconfigure(1, weight=7)
         container.grid_rowconfigure(0, weight=1)
 
-        # ───── IZQUIERDA (TREE)
+        # ───── TREE
         self.tree_frame = ctk.CTkScrollableFrame(
             container,
             fg_color=C["bg_panel"],
             corner_radius=12
         )
-        self.tree_frame.grid(row=0, column=0, sticky="nsew", padx=(20, 10), pady=20)
+        self.tree_frame.grid(row=0, column=0, sticky="nsew", padx=(10, 5), pady=10)
 
-        # ───── DERECHA (PREVIEW)
+        # ───── PREVIEW
         right = ctk.CTkFrame(container, fg_color=C["bg_panel"], corner_radius=12)
-        right.grid(row=0, column=1, sticky="nsew", padx=(10, 20), pady=20)
+        right.grid(row=0, column=1, sticky="nsew", padx=(5, 10), pady=10)
 
-        # 🔥 EXPANSIÓN REAL (arregla preview delgado)
         right.grid_columnconfigure(0, weight=1)
         right.grid_rowconfigure(1, weight=1)
 
@@ -95,22 +126,18 @@ class TreeView(ctk.CTkFrame):
         arrow = "▼" if path in self.expanded else "▶" if is_dir else " "
         icon = "📂" if path in self.expanded else "📁" if is_dir else "📄"
 
-        # 🔥 CONTENEDOR HORIZONTAL
         line = ctk.CTkFrame(container, fg_color="transparent")
         line.pack(fill="x")
 
-        # 🔹 Nombre principal
         name_label = ctk.CTkLabel(
             line,
             text=f"{arrow} {icon} {name}",
             anchor="w",
             cursor="hand2",
             text_color=C["accent"] if is_dir else C["text_primary"],
-            fg_color="transparent"
         )
         name_label.pack(side="left", fill="x", expand=True)
 
-        # 🔹 Hint separado (NO mezclado)
         if is_dir and path not in self.expanded:
             hint_label = ctk.CTkLabel(
                 line,
@@ -120,57 +147,19 @@ class TreeView(ctk.CTkFrame):
             )
             hint_label.pack(side="left")
 
-        # 🔥 HOVER EN TODA LA FILA
-        def _hover_in(e):
-            row.configure(fg_color=C["bg_hover"])
-
-        def _hover_out(e):
-            row.configure(fg_color="transparent")
+        def _hover_in(e): row.configure(fg_color=C["bg_hover"])
+        def _hover_out(e): row.configure(fg_color="transparent")
 
         row.bind("<Enter>", _hover_in)
         row.bind("<Leave>", _hover_out)
-        name_label.bind("<Enter>", _hover_in)
-        name_label.bind("<Leave>", _hover_out)
 
-        # 🔥 CLICK
         if is_dir:
             name_label.bind("<Button-1>", lambda e, p=path: self._toggle(p))
         else:
             name_label.bind("<Button-1>", lambda e, p=path: self.open_file(p))
 
-        # 🔥 hijos
         if is_dir and path in self.expanded:
             self._render_children(parent, path, level + 1)
-
-    def _render_children(self, parent, path, level):
-        try:
-            entries = sorted(
-                os.scandir(path),
-                key=lambda e: (not e.is_dir(), e.name.lower())
-            )
-        except Exception:
-            return
-
-        for entry in entries:
-            # 🔥 IGNORE REAL (walker)
-            if entry.name in IGNORE_DIRS or entry.name.startswith("."):
-                continue
-
-            self._create_item(
-                parent,
-                entry.path,
-                entry.name,
-                level,
-                entry.is_dir()
-            )
-
-    def _toggle(self, path):
-        if path in self.expanded:
-            self.expanded.remove(path)
-        else:
-            self.expanded.add(path)
-
-        self._render_tree()
 
     # ───────────────── PREVIEW ─────────────────
     def open_file(self, path, highlight_lines=None):
@@ -190,7 +179,7 @@ class TreeView(ctk.CTkFrame):
             self.preview_box.tag_remove("warning", "0.0", "end")
             self.preview_box.tag_remove("info", "0.0", "end")
 
-            # 🔥 highlight múltiple
+            # highlight (si viene del analyzer)
             if highlight_lines:
                 for ln, level in highlight_lines:
                     if ln > 0:
@@ -206,6 +195,48 @@ class TreeView(ctk.CTkFrame):
         except Exception as e:
             self.preview_box.delete("0.0", "end")
             self.preview_box.insert("0.0", str(e))
+
+
+    def _render_children(self, parent, path, level):
+        try:
+            entries = sorted(
+                os.scandir(path),
+                key=lambda e: (not e.is_dir(), e.name.lower())
+            )
+        except Exception:
+            return
+
+        for entry in entries:
+            if entry.name in IGNORE_DIRS or entry.name.startswith("."):
+                continue
+
+            self._create_item(parent, entry.path, entry.name, level, entry.is_dir())
+
+    def _toggle(self, path):
+        if path in self.expanded:
+            self.expanded.remove(path)
+        else:
+            self.expanded.add(path)
+
+        self._render_tree()
+
+    # ───────────────── EXPORT ─────────────────
+    def export_tree_pdf(self):
+        path = self.state.project_path
+
+        if not path:
+            messagebox.showwarning("Sin proyecto", "Selecciona una carpeta primero.")
+            return
+
+        try:
+            file = export_tree_to_pdf(path)
+
+            if file:
+                messagebox.showinfo("✅ Exportado", f"PDF guardado en:\n{file}")
+            else:
+                messagebox.showwarning("Cancelado", "No se seleccionó ubicación.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
     # ───────────────── EVENTOS ─────────────────
     def _on_tree_update(self, event, data):

@@ -1,3 +1,31 @@
+"""
+PDF Exporter - Generador de reportes de diagnóstico
+
+Responsabilidad:
+- Convertir resultados del análisis en un informe PDF profesional
+- Mostrar métricas generales (score, errores, advertencias)
+- Listar hallazgos agrupados por archivo
+
+Qué hace:
+- Agrupa findings por archivo
+- Muestra nivel, línea, mensaje y sugerencia
+- Genera documento listo para compartir
+
+Características:
+- Soporte para modelos legacy y AdvancedFinding
+- Manejo seguro de atributos (no rompe si faltan datos)
+- Exportación automática a carpeta Downloads
+
+Entrada:
+- project_path
+- profile_description
+- analysis_data (dict con findings y métricas)
+
+Salida:
+- Archivo PDF generado
+"""
+
+
 import os
 from datetime import datetime
 from collections import defaultdict
@@ -11,6 +39,9 @@ def export_report_to_pdf(project_path, profile_description, analysis_data):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+    if not os.path.exists(downloads_path):
+        downloads_path = os.path.expanduser("~")
+
     filename = os.path.join(
         downloads_path,
         f"CodeHunter_Report_{project_name}_{timestamp}.pdf"
@@ -20,85 +51,64 @@ def export_report_to_pdf(project_path, profile_description, analysis_data):
     elements = []
 
     styles = getSampleStyleSheet()
-    title_style = styles["Title"]
-    heading_style = styles["Heading2"]
-    subheading_style = styles["Heading3"]
-    normal_style = styles["Normal"]
 
-    # ═══════════════════════════════════════
-    # TÍTULO
-    # ═══════════════════════════════════════
-    elements.append(Paragraph("CODE HUNTER", title_style))
+    # ───── TÍTULO
+    elements.append(Paragraph("CODE HUNTER", styles["Title"]))
     elements.append(Spacer(1, 0.2 * inch))
-    elements.append(Paragraph("Informe Profesional de Diagnóstico", heading_style))
+    elements.append(Paragraph("Informe Profesional de Diagnóstico", styles["Heading2"]))
     elements.append(Spacer(1, 0.4 * inch))
 
-    # ═══════════════════════════════════════
-    # PERFIL
-    # ═══════════════════════════════════════
-    elements.append(Paragraph("1. Perfil del Sistema Analizado", heading_style))
+    # ───── PERFIL
+    elements.append(Paragraph("1. Perfil del Sistema Analizado", styles["Heading2"]))
     elements.append(Spacer(1, 0.2 * inch))
 
     for line in profile_description.split("\n"):
         if line.strip():
-            elements.append(Paragraph(line, normal_style))
+            elements.append(Paragraph(line, styles["Normal"]))
             elements.append(Spacer(1, 0.15 * inch))
 
     elements.append(Spacer(1, 0.4 * inch))
 
-    # ═══════════════════════════════════════
-    # RESULTADOS
-    # ═══════════════════════════════════════
-    elements.append(Paragraph("2. Resultado del Análisis", heading_style))
+    # ───── RESULTADOS
+    elements.append(Paragraph("2. Resultado del Análisis", styles["Heading2"]))
     elements.append(Spacer(1, 0.2 * inch))
 
-    critical = analysis_data.get("critical", 0)
-    warnings = analysis_data.get("warnings", 0)
-    score = analysis_data.get("score", 0)
-
-    elements.append(Paragraph(f"Índice de Salud: {score}/100", normal_style))
-    elements.append(Paragraph(f"Problemas críticos: {critical}", normal_style))
-    elements.append(Paragraph(f"Advertencias: {warnings}", normal_style))
+    elements.append(Paragraph(f"Índice de Salud: {analysis_data.get('score', 0)}/100", styles["Normal"]))
+    elements.append(Paragraph(f"Problemas críticos: {analysis_data.get('critical', 0)}", styles["Normal"]))
+    elements.append(Paragraph(f"Advertencias: {analysis_data.get('warnings', 0)}", styles["Normal"]))
     elements.append(Spacer(1, 0.3 * inch))
 
-    # ═══════════════════════════════════════
-    # DETALLE AGRUPADO
-    # ═══════════════════════════════════════
-    elements.append(Paragraph("3. Detalle de Hallazgos", heading_style))
+    # ───── DETALLE
+    elements.append(Paragraph("3. Detalle de Hallazgos", styles["Heading2"]))
     elements.append(Spacer(1, 0.2 * inch))
 
     findings = analysis_data.get("findings", [])
 
-    if not findings:
-        elements.append(Paragraph("No se detectaron problemas relevantes.", normal_style))
-    else:
-        # 🔥 AGRUPAR POR ARCHIVO
-        grouped = defaultdict(list)
-        for f in findings:
-            grouped[f.file].append(f)
+    grouped = defaultdict(list)
+    for f in findings:
+        file_path = getattr(f, "file", "unknown_file")
+        grouped[file_path].append(f)
 
-        # 🔥 ORDENAR ARCHIVOS
-        for file_path in sorted(grouped.keys()):
+    for file_path in sorted(grouped.keys()):
+        elements.append(Paragraph(f"📁 {file_path}", styles["Heading3"]))
+        elements.append(Spacer(1, 0.15 * inch))
 
-            elements.append(Paragraph(f"📁 {file_path}", subheading_style))
-            elements.append(Spacer(1, 0.15 * inch))
+        for f in grouped[file_path]:
+            level = getattr(f, "level", "info")
+            message = getattr(f, "message", "Sin mensaje")
+            line = getattr(f, "line", "?")
+            suggestion = getattr(f, "suggestion", "Sin sugerencia")
 
-            for f in grouped[file_path]:
-                level = f.level.value if hasattr(f.level, "value") else f.level
+            elements.append(Paragraph(f"[{level.upper()}] {message}", styles["Normal"]))
+            elements.append(Paragraph(f"Línea: {line}", styles["Normal"]))
+            elements.append(Paragraph(f"Sugerencia: {suggestion}", styles["Normal"]))
+            elements.append(Spacer(1, 0.25 * inch))
 
-                elements.append(Paragraph(f"[{level}] {f.message}", normal_style))
-                elements.append(Paragraph(f"Línea: {f.line}", normal_style))
-                elements.append(Paragraph(f"Sugerencia: {f.suggestion}", normal_style))
-                elements.append(Spacer(1, 0.25 * inch))
+        elements.append(Spacer(1, 0.3 * inch))
 
-            elements.append(Spacer(1, 0.3 * inch))
-
-    # ═══════════════════════════════════════
-    # FOOTER
-    # ═══════════════════════════════════════
     elements.append(Spacer(1, 0.5 * inch))
     elements.append(Paragraph(
-        f"Documento generado por CodeHunter — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Generado por CodeHunter — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         styles["Italic"]
     ))
 
