@@ -22,7 +22,7 @@ ls .venv\Scripts
 
 python -m venv .venv                    --crea el entorno
 
-.\venv\Scripts\Activate.ps1            -- activar el venv
+.\.venv\Scripts\Activate.ps1           -- activar el venv
 
 pip install -r requirements.txt        -- para instalar en otro pc
 
@@ -34,6 +34,8 @@ pip install pandas
 python -m CodeHunter             /para ejecutar CodeHunter
 
 python -m CodeHunter.main_gui          ejecutar la gui
+
+pyinstaller --onefile --windowed --name "CodeHunter" CodeHunter/main_gui.py   -----  instalar el .exe
 
 E:\proyectos IA\CodeHunter_Analizer -0.2
 
