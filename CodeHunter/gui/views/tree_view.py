@@ -1,34 +1,25 @@
 """
 TreeView - Explorador visual del proyecto (tipo VSCode)
 
-Responsabilidad:
-- Mostrar estructura de carpetas y archivos
-- Permitir navegación interactiva (expandir/colapsar)
-- Mostrar preview de archivos seleccionados
-- Resaltar líneas con errores (findings)
+Sirve para:
+- Mostrar carpetas y archivos
+- Navegar (expandir/colapsar)
+- Previsualizar archivos (texto o imagen)
+- Exportar estructura a PDF
 
-Características:
-- Ignora carpetas basura (venv, cache, etc)
-- Hover UI tipo editor moderno
-- Preview integrado (sin abrir ventanas nuevas)
-- Soporte para múltiples highlights
-
-Extras:
-- Exportación del árbol del proyecto a PDF
-
-Depende de:
-- AppState (estado global)
-- project_walker (filtrado de archivos)
-- tree_pdf_exporter (exportación)
+Vista previa:
+- TEXTO → CTkTextbox
+- IMAGEN → Canvas + zoom + scroll
 """
-
-
 
 import os
 import customtkinter as ctk
 from tkinter import messagebox
 from CodeHunter.utils.project_walker import IGNORE_DIRS
 from CodeHunter.infrastructure.tree_pdf_exporter import export_tree_to_pdf
+from PIL import Image, ImageTk
+
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")
 
 
 class TreeView(ctk.CTkFrame):
@@ -39,206 +30,246 @@ class TreeView(ctk.CTkFrame):
         self.colors = colors
         self.expanded = set()
 
-        # 🔥 FIX LAYOUT GLOBAL
+        # layout base
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         self._build_ui()
         self.state.subscribe(self._on_tree_update)
 
-    # ───────────────── UI ─────────────────
+        self.level_colors = [
+            "#58A6FF",
+            "#7EE787",
+            "#F2CC60",
+            "#FF7B72",
+            "#D2A8FF",
+        ]
+
+    # =========================================================
+    # UI PRINCIPAL
+    # =========================================================
     def _build_ui(self):
         C = self.colors
 
-        # ───────── TOP BAR
+        # TOP BAR
         top_bar = ctk.CTkFrame(self, fg_color="transparent", height=40)
         top_bar.grid(row=0, column=0, sticky="ew", padx=20, pady=(5, 0))
 
-        btn_export = ctk.CTkButton(
+        ctk.CTkButton(
             top_bar,
             text="🌳 Exportar Árbol",
-            height=36,
             command=self.export_tree_pdf
-        )
-        btn_export.pack(side="left")
+        ).pack(side="left")
 
-        # ───────── CONTENEDOR
+        # CONTENEDOR
         container = ctk.CTkFrame(self, fg_color="transparent")
         container.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
 
-        # 🔥 PROPORCIÓN REAL
         container.grid_columnconfigure(0, weight=3)
         container.grid_columnconfigure(1, weight=7)
         container.grid_rowconfigure(0, weight=1)
 
-        # ───── TREE
-        self.tree_frame = ctk.CTkScrollableFrame(
-            container,
-            fg_color=C["bg_panel"],
-            corner_radius=12
-        )
+        # TREE
+        self.tree_frame = ctk.CTkScrollableFrame(container)
         self.tree_frame.grid(row=0, column=0, sticky="nsew", padx=(10, 5), pady=10)
 
-        # ───── PREVIEW
-        right = ctk.CTkFrame(container, fg_color=C["bg_panel"], corner_radius=12)
+        # PREVIEW
+        right = ctk.CTkFrame(container)
         right.grid(row=0, column=1, sticky="nsew", padx=(5, 10), pady=10)
 
-        right.grid_columnconfigure(0, weight=1)
         right.grid_rowconfigure(1, weight=1)
+        right.grid_columnconfigure(0, weight=1)
 
-        self.preview_title = ctk.CTkLabel(
-            right,
-            text="📄 Preview",
-            font=ctk.CTkFont(size=16, weight="bold"),
-            text_color=C["text_primary"]
-        )
+        self.preview_title = ctk.CTkLabel(right, text="📄 Preview")
         self.preview_title.grid(row=0, column=0, sticky="w", padx=10, pady=10)
 
-        self.preview_box = ctk.CTkTextbox(right)
-        self.preview_box.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.preview_container = ctk.CTkFrame(right)
+        self.preview_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
-        self.preview_box.insert("0.0", "Selecciona un archivo")
+        # CANVAS (IMÁGENES)
+        self.canvas = ctk.CTkCanvas(self.preview_container)
+        self.canvas.pack(fill="both", expand=True)
+
+        self.scroll_y = ctk.CTkScrollbar(
+            self.preview_container, orientation="vertical", command=self.canvas.yview
+        )
+        self.scroll_y.pack(side="right", fill="y")
+
+        self.scroll_x = ctk.CTkScrollbar(
+            self.preview_container, orientation="horizontal", command=self.canvas.xview
+        )
+        self.scroll_x.pack(side="bottom", fill="x")
+
+        self.canvas.configure(
+            yscrollcommand=self.scroll_y.set,
+            xscrollcommand=self.scroll_x.set
+        )
+
+        # TEXTBOX (TEXTO)
+        self.preview_box = ctk.CTkTextbox(self.preview_container)
+        self.preview_box.place(relwidth=1, relheight=1)
+        self.preview_box.lower()
+
+        self.text_scroll = ctk.CTkScrollbar(self.preview_container, command=self.preview_box.yview)
+        self.preview_box.configure(yscrollcommand=self.text_scroll.set)
+
+        # estado imagen
+        self.zoom = 1.0
+        self.original_image = None
 
         self._render_tree()
 
-    # ───────────────── TREE ─────────────────
+    # =========================================================
+    # TREE
+    # =========================================================
     def _render_tree(self):
         for w in self.tree_frame.winfo_children():
             w.destroy()
 
-        path = self.state.project_path
-        if not path:
+        if not self.state.project_path:
             return
 
-        self._create_item(self.tree_frame, path, os.path.basename(path), 0, True)
+        self._create_item(self.tree_frame, self.state.project_path,
+                          os.path.basename(self.state.project_path), 0, True)
 
     def _create_item(self, parent, path, name, level, is_dir):
-        C = self.colors
-
-        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row = ctk.CTkFrame(parent)
         row.pack(fill="x")
 
-        indent = level * 20
-
-        container = ctk.CTkFrame(row, fg_color="transparent")
-        container.pack(fill="x", padx=(indent, 0))
+        container = ctk.CTkFrame(row)
+        container.pack(fill="x", padx=(level * 20, 0))
 
         arrow = "▼" if path in self.expanded else "▶" if is_dir else " "
         icon = "📂" if path in self.expanded else "📁" if is_dir else "📄"
 
-        line = ctk.CTkFrame(container, fg_color="transparent")
-        line.pack(fill="x")
-
-        name_label = ctk.CTkLabel(
-            line,
+        label = ctk.CTkLabel(
+            container,
             text=f"{arrow} {icon} {name}",
             anchor="w",
-            cursor="hand2",
-            text_color=C["accent"] if is_dir else C["text_primary"],
+            cursor="hand2"
         )
-        name_label.pack(side="left", fill="x", expand=True)
-
-        if is_dir and path not in self.expanded:
-            hint_label = ctk.CTkLabel(
-                line,
-                text="  (click para expandir)",
-                font=ctk.CTkFont(size=11),
-                text_color=C["text_muted"]
-            )
-            hint_label.pack(side="left")
-
-        def _hover_in(e): row.configure(fg_color=C["bg_hover"])
-        def _hover_out(e): row.configure(fg_color="transparent")
-
-        row.bind("<Enter>", _hover_in)
-        row.bind("<Leave>", _hover_out)
+        label.pack(fill="x")
 
         if is_dir:
-            name_label.bind("<Button-1>", lambda e, p=path: self._toggle(p))
+            label.bind("<Button-1>", lambda e: self._toggle(path))
         else:
-            name_label.bind("<Button-1>", lambda e, p=path: self.open_file(p))
+            label.bind("<Button-1>", lambda e: self.open_file(path))
 
         if is_dir and path in self.expanded:
-            self._render_children(parent, path, level + 1)
-
-    # ───────────────── PREVIEW ─────────────────
-    def open_file(self, path, highlight_lines=None):
-        try:
-            with open(path, encoding="utf-8", errors="ignore") as f:
-                lines = f.readlines()
-
-            self.preview_box.delete("0.0", "end")
-
-            for i, content in enumerate(lines, start=1):
-                self.preview_box.insert("end", f"{i:4} | {content}")
-
-            self.preview_title.configure(text=f"📄 {os.path.basename(path)}")
-
-            # limpiar tags
-            self.preview_box.tag_remove("critical", "0.0", "end")
-            self.preview_box.tag_remove("warning", "0.0", "end")
-            self.preview_box.tag_remove("info", "0.0", "end")
-
-            # highlight (si viene del analyzer)
-            if highlight_lines:
-                for ln, level in highlight_lines:
-                    if ln > 0:
-                        self.preview_box.tag_add(level, f"{ln}.0", f"{ln}.end")
-
-                self.preview_box.see(f"{highlight_lines[0][0]}.0")
-
-            # colores
-            self.preview_box.tag_config("critical", background="#5A1E1E")
-            self.preview_box.tag_config("warning", background="#5A4B1E")
-            self.preview_box.tag_config("info", background="#1E3A5A")
-
-        except Exception as e:
-            self.preview_box.delete("0.0", "end")
-            self.preview_box.insert("0.0", str(e))
-
-
-    def _render_children(self, parent, path, level):
-        try:
-            entries = sorted(
-                os.scandir(path),
-                key=lambda e: (not e.is_dir(), e.name.lower())
-            )
-        except Exception:
-            return
-
-        for entry in entries:
-            if entry.name in IGNORE_DIRS or entry.name.startswith("."):
-                continue
-
-            self._create_item(parent, entry.path, entry.name, level, entry.is_dir())
+            for entry in sorted(os.scandir(path), key=lambda e: (not e.is_dir(), e.name.lower())):
+                if entry.name in IGNORE_DIRS or entry.name.startswith("."):
+                    continue
+                self._create_item(parent, entry.path, entry.name, level + 1, entry.is_dir())
 
     def _toggle(self, path):
         if path in self.expanded:
             self.expanded.remove(path)
         else:
             self.expanded.add(path)
-
         self._render_tree()
 
-    # ───────────────── EXPORT ─────────────────
-    def export_tree_pdf(self):
-        path = self.state.project_path
+    # =========================================================
+    # PREVIEW PRINCIPAL
+    # =========================================================
+    def open_file(self, path):
+        ext = os.path.splitext(path)[1].lower()
 
-        if not path:
+        self._reset_preview()
+
+        if ext in IMAGE_EXTENSIONS:
+            self._show_image_preview(path)
+        else:
+            self._show_text_preview(path)
+
+    # =========================================================
+    # RESET UI (clave para evitar bugs)
+    # =========================================================
+    def _reset_preview(self):
+        self.canvas.delete("all")
+        self.canvas.unbind("<MouseWheel>")
+
+        self.preview_box.configure(state="normal")
+        self.preview_box.delete("0.0", "end")
+        self.preview_box.lower()
+
+        self.text_scroll.place_forget()
+        self.scroll_x.pack_forget()
+
+    # =========================================================
+    # TEXTO
+    # =========================================================
+    def _show_text_preview(self, path):
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+
+            self.preview_title.configure(text=f"📄 {os.path.basename(path)}")
+
+            self.preview_box.lift()
+            self.text_scroll.place(relx=1, rely=0, relheight=1, anchor="ne")
+
+            for i, line in enumerate(content.splitlines(), 1):
+                self.preview_box.insert("end", f"{i:4} | {line}\n")
+
+            self.preview_box.configure(state="disabled")
+
+        except Exception as e:
+            self.canvas.create_text(10, 10, anchor="nw", text=str(e))
+
+    # =========================================================
+    # IMAGEN
+    # =========================================================
+    def _show_image_preview(self, path):
+        try:
+            self.scroll_x.pack(side="bottom", fill="x")
+
+            self.preview_title.configure(text=f"🖼️ {os.path.basename(path)}")
+
+            self.original_image = Image.open(path)
+            self.zoom = 1.0
+
+            self._render_image()
+
+            self.canvas.bind("<MouseWheel>", self._zoom_image)
+
+        except Exception as e:
+            self.canvas.create_text(10, 10, anchor="nw", text=str(e))
+
+    def _render_image(self):
+        img = self.original_image.copy()
+        w, h = img.size
+        img = img.resize((int(w * self.zoom), int(h * self.zoom)))
+
+        self.tk_image = ImageTk.PhotoImage(img)
+
+        self.canvas.delete("all")
+        self.canvas.create_image(0, 0, anchor="nw", image=self.tk_image)
+
+        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+    def _zoom_image(self, event):
+        self.zoom *= 1.1 if event.delta > 0 else 0.9
+        self.zoom = max(0.2, min(self.zoom, 5))
+        self._render_image()
+
+    # =========================================================
+    # EXPORT
+    # =========================================================
+    def export_tree_pdf(self):
+        if not self.state.project_path:
             messagebox.showwarning("Sin proyecto", "Selecciona una carpeta primero.")
             return
 
         try:
-            file = export_tree_to_pdf(path)
-
+            file = export_tree_to_pdf(self.state.project_path)
             if file:
-                messagebox.showinfo("✅ Exportado", f"PDF guardado en:\n{file}")
-            else:
-                messagebox.showwarning("Cancelado", "No se seleccionó ubicación.")
+                messagebox.showinfo("Exportado", file)
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-    # ───────────────── EVENTOS ─────────────────
+    # =========================================================
+    # EVENTOS
+    # =========================================================
     def _on_tree_update(self, event, data):
         if event in ("folder_selected", "analysis_done", "reset"):
             self.after(0, self._render_tree)

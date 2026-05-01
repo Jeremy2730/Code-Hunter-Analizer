@@ -35,10 +35,9 @@ def build_tree_lines(project_path):
     lines = []
     root_name = os.path.basename(project_path)
 
-    # 🔥 raíz limpia
-    lines.append(f"{root_name}/")
+    lines.append((f"{root_name}/", 0, True))
 
-    def walk(dir_path, prefix=""):
+    def walk(dir_path, prefix="", level=1):
         try:
             entries = sorted(
                 os.scandir(dir_path),
@@ -55,15 +54,15 @@ def build_tree_lines(project_path):
         for i, entry in enumerate(entries):
             is_last = (i == len(entries) - 1)
 
-            # 🔥 símbolos compatibles (NO emojis)
             connector = "└── " if is_last else "├── "
             extension = "    " if is_last else "│   "
 
-            # 🔥 sin iconos → evita cuadros
-            lines.append(f"{prefix}{connector}{entry.name}")
+            line = f"{prefix}{connector}{entry.name}"
+
+            lines.append((line, level, entry.is_dir()))
 
             if entry.is_dir():
-                walk(entry.path, prefix + extension)
+                walk(entry.path, prefix + extension, level + 1)
 
     walk(project_path)
     return lines
@@ -77,6 +76,15 @@ def export_tree_to_pdf(project_path):
         initialfile="codehunter_tree.pdf",
         title="Guardar árbol del proyecto"
     )
+
+    level_colors = [
+        "#58A6FF",  # nivel 0 (raíz)
+        "#7EE787",  # nivel 1
+        "#F2CC60",  # nivel 2
+        "#FF7B72",  # nivel 3
+        "#D2A8FF",  # nivel 4+
+    ]
+
 
     if not save_path:
         return None
@@ -96,9 +104,18 @@ def export_tree_to_pdf(project_path):
     # ───── TREE
     lines = build_tree_lines(project_path)
 
-    for line in lines:
+    for line, level, is_dir in lines:
+
+        if is_dir:
+            color = level_colors[min(level, len(level_colors)-1)]
+        else:
+            color = "#C9D1D9"  # archivos (gris elegante)
+
         elements.append(
-            Paragraph(f"<font name='Courier'>{line}</font>", normal)
+            Paragraph(
+                f"<font name='Courier' color='{color}'>{line}</font>",
+                normal
+            )
         )
         elements.append(Spacer(1, 0.12 * inch))
 
