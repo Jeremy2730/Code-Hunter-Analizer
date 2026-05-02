@@ -1,4 +1,4 @@
-from .ui.cli_controller import run_cli
+from CodeHunter.ui.cli_controller import run_cli
 
 def main():
     project_path = input("📁 Ingresa la ruta del proyecto a analizar: ").strip()

@@ -21,7 +21,7 @@ El filtrado se hace AQUÍ, no en el engine, para mantenerlo modular.
 """
 
 from typing import List, Dict
-from ..core.models import AdvancedFinding
+from CodeHunter.core.models import AdvancedFinding
 from CodeHunter.core.engine import AnalysisEngine
 from CodeHunter.utils.project_walker import walk_python_files
 

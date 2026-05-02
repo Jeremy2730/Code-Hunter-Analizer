@@ -11,7 +11,7 @@ import threading
 import customtkinter as ctk
 import time
 from tkinter import filedialog, messagebox
-from ..utils import get_level as _level, get_attr as _attr
+from CodeHunter.gui.utils import get_level as _level, get_attr as _attr
 from CodeHunter.utils.project_walker import walk_python_files
 from CodeHunter.infrastructure.pdf_exporter import export_report_to_pdf
 

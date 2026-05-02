@@ -35,7 +35,7 @@ python -m CodeHunter             /para ejecutar CodeHunter
 
 python -m CodeHunter.main_gui          ejecutar la gui
 
-pyinstaller --onefile --windowed --name "CodeHunter" CodeHunter/main_gui.py   -----  instalar el .exe
+pyinstaller --onefile --windowed --name "CodeHunter" --paths . CodeHunter/main_gui.py   -----  instalar el .exe
 
 E:\proyectos IA\CodeHunter_Analizer -0.2
 

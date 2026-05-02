@@ -1,7 +1,7 @@
 import os
 import ast
 from collections import Counter
-from ..utils.project_walker import walk_project
+from CodeHunter.utils.project_walker import walk_project
 
 
 # 🔎 Palabras clave estratégicas

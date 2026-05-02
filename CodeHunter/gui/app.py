@@ -12,12 +12,12 @@ Contenedor principal de la aplicación.
 
 import os
 import customtkinter as ctk
-from .sidebar import Sidebar 
-from .views.dashboard_view import DashboardView
-from .views.findings_view import FindingsView
-from .views.tree_view import TreeView
-from .views.search_view import SearchView
-from .state import AppState
+from CodeHunter.gui.sidebar import Sidebar 
+from CodeHunter.gui.views.dashboard_view import DashboardView
+from CodeHunter.gui.views.findings_view import FindingsView
+from CodeHunter.gui.views.tree_view import TreeView
+from CodeHunter.gui.views.search_view import SearchView
+from CodeHunter.gui.state import AppState
 
 
 ctk.set_appearance_mode("dark")

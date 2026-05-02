@@ -7,7 +7,7 @@ Soporta imports absolutos y relativos.
 import os
 import ast
 from pathlib import Path
-from ..utils.project_walker import walk_project
+from CodeHunter.utils.project_walker import walk_project
 
 
 # ──────────────────────────────────────────────────────────────────────────────

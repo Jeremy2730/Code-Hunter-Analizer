@@ -1,6 +1,6 @@
 import os
 import ast
-from ..utils.project_walker import walk_project
+from CodeHunter.utils.project_walker import walk_project
 
 
 def search_code(project_path, query):

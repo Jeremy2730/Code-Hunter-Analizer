@@ -1,8 +1,8 @@
 import os
 import ast
-from ..file_scanner import build_project_tree  # ← AGREGAR AQUÍ
-from ..core.models import Finding
-from ..utils.project_walker import walk_project
+from CodeHunter.file_scanner import build_project_tree  # ← AGREGAR AQUÍ
+from CodeHunter.core.models import Finding
+from CodeHunter.utils.project_walker import walk_project
 
 from .import_analyzer import detect_unused_imports, classify_import
 from .function_analyzer import analyze_function, detect_duplicate_functions

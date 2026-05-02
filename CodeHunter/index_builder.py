@@ -1,4 +1,4 @@
-from .function_parser import extract_functions
+from CodeHunter.function_parser import extract_functions
 
 def build_function_index(python_files, base_path):
     index = {}

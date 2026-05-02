@@ -5,7 +5,7 @@ Detecta archivos Python vacíos y carpetas realmente vacías.
 
 import os
 from .function_analyzer import Finding
-from ..utils.project_walker import walk_project, IGNORE_DIRS
+from CodeHunter.utils.project_walker import walk_project, IGNORE_DIRS
 
 
 def detect_empty_python_files(project_path):

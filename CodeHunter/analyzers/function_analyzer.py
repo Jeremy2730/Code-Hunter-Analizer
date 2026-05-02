@@ -1,5 +1,5 @@
 import ast
-from ..core.models import Finding
+from CodeHunter.core.models import Finding
 
 
 IGNORED_FUNCTIONS = {

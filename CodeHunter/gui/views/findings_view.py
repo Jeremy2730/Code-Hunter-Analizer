@@ -5,7 +5,7 @@ Lista filtrable de todos los problemas detectados.
 
 import os
 import customtkinter as ctk
-from ..utils import get_level as _level, get_attr as _attr
+from CodeHunter.gui.utils import get_level as _level, get_attr as _attr
 
 
 class FindingsView(ctk.CTkFrame):

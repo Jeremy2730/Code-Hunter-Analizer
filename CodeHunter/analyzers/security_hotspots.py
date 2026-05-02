@@ -4,7 +4,7 @@ Security Hotspots - Identifica código sensible que requiere revisión manual
 
 import ast
 from typing import List
-from ..core.models import AdvancedFinding, Severity, Category
+from CodeHunter.core.models import AdvancedFinding, Severity, Category
 
 
 # 🔹 ENTRY POINT (LO LLAMA EL ENGINE)

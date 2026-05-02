@@ -4,7 +4,7 @@ Code Smell Detector - Detecta problemas de diseño y mantenibilidad
 
 import ast
 from typing import List
-from ..core.models import AdvancedFinding, Severity, Category
+from CodeHunter.core.models import AdvancedFinding, Severity, Category
 
 
 def detect_code_smells(file_path: str) -> List[AdvancedFinding]:
